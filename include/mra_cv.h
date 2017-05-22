@@ -25,7 +25,7 @@ int 				**vc_type;
 long double **vc_start;
 long double **vc_end;
 int 				config_mra_vc_file_line[4];
-double 			vc_traces_time;
+long double vc_traces_time;
 char*    		vc_status;
 double 			control_timestamp; 
 
@@ -37,6 +37,7 @@ int* 					vc_state_working;
 int*				mra_affinity;
 
 int         total_tasks;
+int*        worker_reduce_tasks;
 
 /** @brief  Matrix that VC to workers. */
 char**  func_mra_vc;
@@ -46,22 +47,34 @@ char**  func_mra_vc;
 /** @brief  Information of availability . */
 
 enum mra_vc_status_e {
+    NEW_WID,
 		VC_NORMAL,
     VC_FAILURE,
     VC_TRANSIENT,
-    VC_UP_TRANSIENT
+    VC_UP_TRANSIENT,
+    OPERATION
 };
 
 enum mra_vc_status_e *behavior;
 
-//enum mra_vc_status_e behavior_vc_status;
+enum fault_mode_e {
+					NORMAL,
+					FAILURE
+};
+
+
+enum fault_mode_e fault_mode;
+
+
 
 /** @brief  Information of failure detection system. */
 struct mra_fd_s {
     enum mra_vc_status_e		mra_vc_status;
     size_t									mra_vc_wid; 
-    double									mra_last_hbtime;
+    double									mra_vc_last_hb;
 } mra_f_detec_f;
+
+struct mra_fd_s *mra_ftm_detec;
 
 /** @brief  Information of failure tolerance system. */
 struct mra_ftsys_s {
@@ -69,16 +82,16 @@ struct mra_ftsys_s {
     enum mra_task_status_e 	mra_ft_task_status;
     size_t									mra_ft_wid; 
     size_t									mra_ft_task_id;
+    enum mra_vc_status_e		mra_ft_vcstat;
     size_t 									mra_ft_msg;
     int  										mra_ft_pid[2];
     enum mra_task_status_e  mra_task_attrib;
+    int                     dist_bruta;
 } mra_ftsys_f, mra_ftm_done_f;
 
 struct mra_ftsys_s *mra_task_ftm;
 
 struct mra_ftsys_s *mra_ftm_done_s;
-
-
 
 /** @brief  Information of traces . */
 typedef struct mra_vc_traces
@@ -91,7 +104,8 @@ typedef struct mra_vc_traces
 
 
 
-
+/** @brief  Restore affinity after Failure */
+void ftm_mra_affinity_f (int mra_id_task, size_t mra_ftm_vc_wid);
 
 #endif /* !MRACV_H */
 

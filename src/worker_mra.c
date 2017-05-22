@@ -21,8 +21,10 @@ along with BigHybrid, MRSG and MRA++.  If not, see <http://www.gnu.org/licenses/
 #include "dfs_mra.h"
 #include "worker_mra.h"
 #include "mra_cv.h"
+
 #include "xbt/log.h"
 #include "xbt/asserts.h"
+
 
 
 XBT_LOG_EXTERNAL_DEFAULT_CATEGORY (msg_test);
@@ -35,6 +37,8 @@ static void update_mra_map_output (msg_host_t worker, size_t mid);
 static void get_mra_chunk (mra_task_info_t ti);
 static void get_mra_map_output (mra_task_info_t ti);
 
+
+
 size_t get_mra_worker_id (msg_host_t worker)
 {
     w_mra_info_t  wi;
@@ -42,6 +46,9 @@ size_t get_mra_worker_id (msg_host_t worker)
     wi = (w_mra_info_t) MSG_host_get_data (worker);
     return wi->mra_wid;
 }
+
+
+
 
 /**
  * @brief  Main worker function.
@@ -51,22 +58,31 @@ size_t get_mra_worker_id (msg_host_t worker)
  */
 int worker_mra (int argc, char* argv[])
 {
-    char           mailbox[MAILBOX_ALIAS_SIZE];
-    msg_host_t     me;
+    char          mailbox[MAILBOX_ALIAS_SIZE];
+    msg_host_t    mra_me;
+    int       		i=0;
 
-    me = MSG_host_self ();
+    mra_me = MSG_host_self ();
+
+		mra_w_stat_f = (struct mra_work_stat_s*)xbt_new(struct mra_work_stat_s*, (config_mra.mra_number_of_workers * (sizeof (struct mra_work_stat_s))));
+
+    for (i=0; i < config_mra.mra_number_of_workers; i++ )
+		{
+		  mra_w_stat_f[i].mra_work_status = 0;
+		}
 
     /* Spawn a process that listens for tasks. */
-    MSG_process_create ("listen_mra", listen_mra, NULL, me);
+    MSG_process_create ("listen_mra", listen_mra, NULL, mra_me);
     /* Spawn a process to exchange data with other workers. */
-    MSG_process_create ("data-node_mra", data_node_mra, NULL, me);
+    MSG_process_create ("data-node_mra", data_node_mra, NULL, mra_me);
     /* Start sending mra_heartbeat signals to the master node. */
     mra_heartbeat ();
+    sprintf (mailbox, DATANODE_MRA_MAILBOX, get_mra_worker_id (mra_me));
+    send_mra_sms (SMS_FINISH_MRA, mailbox);
+    sprintf (mailbox, TASKTRACKER_MRA_MAILBOX, get_mra_worker_id (mra_me));
+    send_mra_sms (SMS_FINISH_MRA, mailbox);
 
-    sprintf (mailbox, DATANODE_MRA_MAILBOX, get_mra_worker_id (me));
-    send_mra_sms (SMS_FINISH_MRA, mailbox);
-    sprintf (mailbox, TASKTRACKER_MRA_MAILBOX, get_mra_worker_id (me));
-    send_mra_sms (SMS_FINISH_MRA, mailbox);
+
 
     return 0;
 }
@@ -80,15 +96,28 @@ static void mra_heartbeat (void)
     size_t       my_id;
   
     my_id = get_mra_worker_id (MSG_host_self ());
+   
     //XBT_INFO ("Work_ID %zd \n", my_id);																			
     while (!job_mra.finished)
+   if  (config_mra.perc_vc_node > 0)
     {	
-    
-      send_mra_sms (SMS_HEARTBEAT_MRA, MASTER_MRA_MAILBOX);
-			mra_vc_sleep_f (my_id, MSG_get_clock ());
+     	mra_vc_sleep_f (my_id, MSG_get_clock ());
 			vc_time_sleep = vc_traces_time;
-			MSG_process_sleep (vc_time_sleep);				
-    } 
+			
+      /*Sends a SMS, if machine is active in initial time.*/
+      if (mra_w_stat_f[my_id].mra_work_status == ACTIVE)
+      {
+      	send_mra_sms (SMS_HEARTBEAT_MRA, MASTER_MRA_MAILBOX);
+      }
+      
+			MSG_process_sleep (vc_time_sleep);	
+						
+    }
+    else
+     {
+			send_mra_sms (SMS_HEARTBEAT_MRA, MASTER_MRA_MAILBOX);
+			MSG_process_sleep (config_mra.mra_heartbeat_interval);
+     }
 
 /*  loop
 static void mra_heartbeat (void)
@@ -101,76 +130,78 @@ static void mra_heartbeat (void)
 }*/  
 }
 
+
 /**
  * @brief  Volatility function from the traces file..
  */
 static int mra_vc_sleep_f (size_t my_id, double vc_time_stamp)
-{   
-   int j=0; 
+{
+   int j=0;
    int i=0;
    int hosts_vc_traces;
    int mra_vc_job_hosts;
-              
+
     /* Number of hosts from trace archive*/
-    hosts_vc_traces = vc_node[config_mra_vc_file_line[0]][0];         
+    hosts_vc_traces = vc_node[config_mra_vc_file_line[0]][0];
     /*Number of volatile hosts defined by user. The result is saved on element array config_mra_vc_file_line[1]*/
     mra_vc_job_hosts = (int)(ceil(config_mra.mra_number_of_workers * (double)config_mra.perc_vc_node/100)) ;
     config_mra_vc_file_line[1] = mra_vc_job_hosts;
     if ( my_id > hosts_vc_traces && mra_vc_job_hosts > hosts_vc_traces ){
     XBT_INFO ("Atention - Number of volatile host %d, in log file is insufficient to simulation \n", hosts_vc_traces);
     return 0;
-   
-    } 
-    
-    if ( my_id < config_mra_vc_file_line[1]) 
+    }
+
+    if ( my_id < config_mra_vc_file_line[1] )
     		{
         	for (i=0; i < config_mra_vc_file_line[0] ; i++)
-        	    	{  
-        	    	  if ((my_id + 1 == vc_node[i][0]) && my_id < mra_vc_job_hosts ) 
+        	    	{
+        	    	  if ((my_id + 1 == vc_node[i][0]) && my_id < mra_vc_job_hosts )
         	    	  {
         	    	  	j=i;
-                  	while ((j < config_mra_vc_file_line[0] )) 
+                  	while ((j < config_mra_vc_file_line[0] ))
                   	{
-                      if (vc_time_stamp >= vc_start[j][0] && vc_time_stamp <= vc_end[j][0])
+                      if (vc_time_stamp >= vc_start[j][0] && vc_time_stamp < vc_end[j][0])
                     		{
                       		if (vc_type[j][0] == 1)
                       			{
                         			vc_traces_time = config_mra.mra_heartbeat_interval;
-                        		
+
                         			job_mra.mra_heartbeats[my_id].wid_timestamp = MSG_get_clock ();
-                        		//XBT_INFO (" Volat_node %zd ON - Traces_time %g, Hearbeat %Lg \n",my_id,vc_traces_time, job_mra.mra_heartbeats[my_id].wid_timestamp);             				
+                        			if (mra_w_stat_f[my_id].mra_work_status == INACTIVE) {
+                        	XBT_INFO (" Volat_node %zd ON - Traces_time %Lg, Hearbeat %Lg \n",my_id,vc_traces_time, job_mra.mra_heartbeats[my_id].wid_timestamp);
+                        	    }
+		  												mra_w_stat_f[my_id].mra_work_status = ACTIVE;
                         			return vc_traces_time;
                         			break;
                       			}
                       		else
                       			{
-                       				vc_traces_time = (vc_end[j][0] - vc_time_stamp);
-                       				if (config_mra.mra_heartbeat_interval < vc_traces_time) 
+                      			  vc_traces_time = (vc_end[j][0] - vc_time_stamp);
+                       				if ((config_mra.mra_heartbeat_interval < vc_traces_time) && mra_w_stat_f[my_id].mra_work_status != INACTIVE)
                        					{
                        						job_mra.mra_heartbeats[my_id].wid_timestamp = MSG_get_clock ();
-                                }         
-                       			//XBT_INFO (" Volat_node %zd OFF - Traces_time %g, Hearbeat %Lg \n", my_id,vc_traces_time, job_mra.mra_heartbeats[my_id].wid_timestamp);	
+                             		}
+                       			XBT_INFO (" Volat_node %zd OFF - Traces_time %Lg, Hearbeat %Lg, EOL %g  \n", my_id,vc_traces_time, job_mra.mra_heartbeats[my_id].wid_timestamp,(double)vc_end[j][0]);
+						                  mra_w_stat_f[my_id].mra_work_status = INACTIVE;
                        				return vc_traces_time;
                        				break;
                       			}
                     		}
 	                     j++;
-                     } 
+                     }
                    }
     			      }
     		}
-    else  
+    else
       	{
        	 	vc_traces_time = config_mra.mra_heartbeat_interval;
        	 	job_mra.mra_heartbeats[my_id].wid_timestamp = MSG_get_clock ();
        		//XBT_INFO (" Host %zd ON - Traces_time %g, Hearbeat %Lg \n", my_id, vc_traces_time, job_mra.mra_heartbeats[my_id].wid_timestamp);
     		}
     return vc_traces_time;
- 
-   
+
+
 }
-
-
 
 
 /**
@@ -179,25 +210,27 @@ static int mra_vc_sleep_f (size_t my_id, double vc_time_stamp)
 static int listen_mra (int argc, char* argv[])
 {
     char         mailbox[MAILBOX_ALIAS_SIZE];
-    msg_error_t  status;
-    msg_host_t   me;
-    msg_task_t   msg = NULL;
+    msg_error_t   status_mra;
+    msg_host_t   mra_me;
+    msg_task_t   msg_mra = NULL;
 
-    me = MSG_host_self ();
-    sprintf (mailbox, TASKTRACKER_MRA_MAILBOX, get_mra_worker_id (me));
+    mra_me = MSG_host_self ();
+    sprintf (mailbox, TASKTRACKER_MRA_MAILBOX, get_mra_worker_id (mra_me));
 
     while (!job_mra.finished)
     {
-	msg = NULL;
-	status = receive (&msg, mailbox);
+	msg_mra = NULL;
+		status_mra = mra_receive (&msg_mra, mailbox);
 
-	if (status == MSG_OK && mra_message_is (msg, SMS_TASK_MRA))
+	if (status_mra == MSG_OK && mra_message_is (msg_mra, SMS_TASK_MRA))
 	{
-	    MSG_process_create ("compute_mra", compute_mra, msg, me);
+	   MSG_process_create ("compute_mra", compute_mra, msg_mra, mra_me); // original
+	   //MSG_process_create ("PROCST_BUG", compute_mra, msg_mra, mra_me);
+
 	}
-	else if (mra_message_is (msg, SMS_FINISH_MRA))
+	else if (mra_message_is (msg_mra, SMS_FINISH_MRA))
 	{
-	    MSG_task_destroy (msg);
+	    MSG_task_destroy (msg_mra);
 	    break;
 	}
     }
@@ -210,7 +243,7 @@ static int listen_mra (int argc, char* argv[])
  */
 static int compute_mra (int argc, char* argv[])
 {
-    msg_error_t  status;
+    msg_error_t   status_mra;
     msg_task_t   mra_task;
     mra_task_info_t  ti;
     xbt_ex_t     e;
@@ -218,8 +251,8 @@ static int compute_mra (int argc, char* argv[])
     mra_task = (msg_task_t) MSG_process_get_data (MSG_process_self ());
     ti = (mra_task_info_t) MSG_task_get_data (mra_task);
     ti->mra_pid = MSG_process_self_PID ();
-		
-		
+
+
     switch (ti->mra_phase)
     {
 	case MRA_MAP:
@@ -239,9 +272,9 @@ static int compute_mra (int argc, char* argv[])
     {
 	TRY
 	{
-	    status = MSG_task_execute (mra_task);
+	     status_mra = MSG_task_execute (mra_task);
 
-	    if (ti->mra_phase == MRA_MAP && status == MSG_OK)
+	    if (ti->mra_phase == MRA_MAP &&  status_mra == MSG_OK)
 		update_mra_map_output (MSG_host_self (), ti->mra_tid);
 	}
 	CATCH (e)
@@ -252,9 +285,9 @@ static int compute_mra (int argc, char* argv[])
     }
 
     job_mra.mra_heartbeats[ti->mra_wid].slots_av[ti->mra_phase]++;
-    
+
     if (!job_mra.finished)
-	send (SMS_TASK_MRA_DONE, 0.0, 0.0, ti, MASTER_MRA_MAILBOX);
+	      mra_send (SMS_TASK_MRA_DONE, 0.0, 0.0, ti, MASTER_MRA_MAILBOX);
 
     return 0;
 }
@@ -262,17 +295,17 @@ static int compute_mra (int argc, char* argv[])
 /**
  * @brief  Update the amount of data produced by a mapper.
  * @param  worker  The worker that finished a map task.
- * @param  mid     The ID of map task.
+ * @param  mra_mid     The ID of map task.
  */
-static void update_mra_map_output (msg_host_t worker, size_t mid)
+static void update_mra_map_output (msg_host_t worker, size_t mra_mid)
 {
-    size_t  rid;
+    size_t  mra_rid;
     size_t  mra_wid;
 
     mra_wid = get_mra_worker_id (worker);
 
-    for (rid = 0; rid < config_mra.amount_of_tasks_mra[MRA_REDUCE]; rid++)
-	job_mra.map_output[mra_wid][rid] += user_mra.map_mra_output_f (mid, rid);
+    for (mra_rid = 0; mra_rid < config_mra.amount_of_tasks_mra[MRA_REDUCE]; mra_rid++)
+	job_mra.map_output[mra_wid][mra_rid] += user_mra.map_mra_output_f (mra_mid, mra_rid);
 }
 
 /**
@@ -282,7 +315,7 @@ static void update_mra_map_output (msg_host_t worker, size_t mid)
 static void get_mra_chunk (mra_task_info_t ti)
 {
     char         mailbox[MAILBOX_ALIAS_SIZE];
-    msg_error_t  status;
+    msg_error_t  status_mra;
     msg_task_t   data = NULL;
     size_t       my_id;
 
@@ -292,15 +325,16 @@ static void get_mra_chunk (mra_task_info_t ti)
     if (ti->mra_src != my_id)
     {
 	sprintf (mailbox, DATANODE_MRA_MAILBOX, ti->mra_src);
-	status = send_mra_sms (SMS_GET_MRA_CHUNK, mailbox);
-	if (status == MSG_OK)
+	status_mra = send_mra_sms (SMS_GET_MRA_CHUNK, mailbox);
+	if (status_mra == MSG_OK)
 	{
 	    sprintf (mailbox, TASK_MRA_MAILBOX, my_id, MSG_process_self_PID ());
-	    status = receive (&data, mailbox);
-	    if (status == MSG_OK)
+	    status_mra = mra_receive (&data, mailbox);
+	    if (status_mra == MSG_OK)
 		MSG_task_destroy (data);
 	}
-    }
+	
+    } 
 }
 
 /**
@@ -310,7 +344,7 @@ static void get_mra_chunk (mra_task_info_t ti)
 static void get_mra_map_output (mra_task_info_t ti)
 {
     char         mailbox[MAILBOX_ALIAS_SIZE];
-    msg_error_t  status;
+    msg_error_t   status_mra;
     msg_task_t   data = NULL;
     size_t       total_copied, must_copy;
     size_t       my_id;
@@ -322,11 +356,11 @@ static void get_mra_map_output (mra_task_info_t ti)
     ti->map_output_copied = data_copied;
     total_copied = 0;
     must_copy = reduce_mra_input_size (ti->mra_tid);
-    
-    
+
+
 #ifdef VERBOSE
     XBT_INFO ("INFO: start copy");
-#endif    
+#endif
     while (total_copied < must_copy)
     	{
 			for (mra_wid = 0; mra_wid < config_mra.mra_number_of_workers; mra_wid++)
@@ -340,27 +374,30 @@ static void get_mra_map_output (mra_task_info_t ti)
 	    		if (job_mra.map_output[mra_wid][ti->mra_tid] > data_copied[mra_wid])
 	    			{
 							sprintf (mailbox, DATANODE_MRA_MAILBOX, mra_wid);
-							status = send (SMS_GET_INTER_MRA_PAIRS, 0.0, 0.0, ti, mailbox);
-							if (status == MSG_OK)
+								status_mra =  mra_send (SMS_GET_INTER_MRA_PAIRS, 0.0, 0.0, ti, mailbox);
+							if (status_mra == MSG_OK)
 								{
 		    					sprintf (mailbox, TASK_MRA_MAILBOX, my_id, MSG_process_self_PID ());
 		    					data = NULL;
+		    					//
+
+
 		    					//TODO Set a timeout: reduce.copy.backoff
-		    					status = receive (&data, mailbox);
-		    					if (status == MSG_OK)
+		    						status_mra = mra_receive (&data, mailbox);
+		    					if (status_mra == MSG_OK)
 		    						{
 											data_copied[mra_wid] += MSG_task_get_data_size (data);
-											total_copied += MSG_task_get_data_size (data);				
+											total_copied += MSG_task_get_data_size (data);
 											MSG_task_destroy (data);
 		    						}
 								}
-	    			}	
-				}	    
+	    			}
+				}
 	/* (Hadoop 0.20.2) mapred/ReduceTask.java:1979 */
-	MSG_process_sleep (5);
+	MSG_process_sleep (3);
     }
 
- 
+
 #ifdef VERBOSE
     XBT_INFO ("INFO: copy finished");
 #endif
@@ -368,4 +405,3 @@ static void get_mra_map_output (mra_task_info_t ti)
 
     xbt_free_ref (&data_copied);
 }
-

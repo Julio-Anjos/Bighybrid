@@ -75,7 +75,14 @@ void default_mrsg_dfs_f (char** dfs_matrix, size_t chunks, size_t workers_mrsg, 
     }
 }
 
-size_t find_random_chunk_owner_mrsg (int cid)
+/**
+* @brief  Choose a random DataNode that owns a specific chunk.
+* @brief  Distribution of Data Replication
+* @param  mrsg_cid  The chunk ID.
+* @return The ID of the DataNode.
+*/
+
+size_t find_random_chunk_owner_mrsg (int mrsg_cid)
 {
     int     replica;
     size_t  owner = NONE;
@@ -85,21 +92,28 @@ size_t find_random_chunk_owner_mrsg (int cid)
 
     for (mrsg_wid = 0; mrsg_wid < config_mrsg.mrsg_number_of_workers; mrsg_wid++)
     {
-	if (chunk_owner_mrsg[cid][mrsg_wid])
-	{
-	    owner = mrsg_wid;
+			if (chunk_owner_mrsg[mrsg_cid][mrsg_wid])
+				{
+	    		owner = mrsg_wid;
 
-	    if (replica == 0)
-		break;
-	    else
-		replica--;
-	}
+	    		if (replica == 0)
+						{
+							break;
+						}
+	  		  else
+	  	 			{
+							replica--;
+		   			}
+				}
+				
     }
 
-    xbt_assert (owner != NONE, "Aborted: chunk %d is missing.", cid);
+    xbt_assert (owner != NONE, "Aborted: chunk %d is missing.", mrsg_cid);
 
     return owner;
 }
+
+/** @brief  DataNode main function. */
 
 int data_node_mrsg (int argc, char* argv[])
 {

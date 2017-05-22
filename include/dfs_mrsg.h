@@ -33,10 +33,10 @@ void default_mrsg_dfs_f (char** dfs_matrix, size_t chunks, size_t workers_mrsg, 
 
 /**
  * @brief  Choose a random DataNode that owns a specific chunk.
- * @param  cid  The chunk ID.
+ * @param  mrsg_cid  The chunk ID.
  * @return The ID of the DataNode.
  */
-size_t find_random_chunk_owner_mrsg (int cid);
+size_t find_random_chunk_owner_mrsg (int mrsg_cid);
 
 /**
  * @brief  DataNode main function.

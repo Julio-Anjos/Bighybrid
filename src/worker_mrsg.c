@@ -154,17 +154,17 @@ static int compute_mrsg (int argc, char* argv[])
 /**
  * @brief  Update the amount of data produced by a mapper.
  * @param  worker_mrsg  The worker that finished a map task.
- * @param  mid     The ID of map task.
+ * @param  mrsg_mid     The ID of map task.
  */
-static void update_mrsg_map_output (msg_host_t worker_mrsg, size_t mid)
+static void update_mrsg_map_output (msg_host_t worker_mrsg, size_t mrsg_mid)
 {
-    size_t  rid;
+    size_t  mrsg_rid;
     size_t  mrsg_wid;
 
     mrsg_wid = get_mrsg_worker_id (worker_mrsg);
 
-    for (rid = 0; rid < config_mrsg.amount_of_tasks_mrsg[MRSG_REDUCE]; rid++)
-	job_mrsg.map_output[mrsg_wid][rid] += user_mrsg.map_output_f (mid, rid);
+    for (mrsg_rid = 0; mrsg_rid < config_mrsg.amount_of_tasks_mrsg[MRSG_REDUCE]; mrsg_rid++)
+	job_mrsg.map_output[mrsg_wid][mrsg_rid] += user_mrsg.map_output_f (mrsg_mid, mrsg_rid);
 }
 /**
  * @brief  Get the chunk associated to a map task.

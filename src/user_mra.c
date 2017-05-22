@@ -1,19 +1,19 @@
-/* Copyright (c) 2014. BigHybrid Team. All rights reserved. */
+/* Copyright (c) 2010-2014. MRA Team. All rights reserved. */
 
-/* This file is part of BigHybrid.
+/* This file is part of MRSG and MRA++.
 
-BigHybrid, MRSG and MRA++ are free software: you can redistribute it and/or modify
+MRSG and MRA++ are free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-BigHybrid, MRSG and MRA++ are distributed in the hope that it will be useful,
+MRSG and MRA++ are distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with BigHybrid, MRSG and MRA++.  If not, see <http://www.gnu.org/licenses/>. */
+along with MRSG and MRA++.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "common_bighybrid.h"
 #include "dfs_mra.h"

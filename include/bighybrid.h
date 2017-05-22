@@ -41,20 +41,20 @@ int BIGHYBRID_main (const char* plat, const char* depl, const char* conf, const 
 // MRA setup
 void MRA_user_init (void);
 
-void MRA_set_task_mra_cost_f ( double (*f)(enum mra_phase_e mra_phase, size_t tid, size_t mra_wid) );
+void MRA_set_task_mra_cost_f ( double (*f)(enum mra_phase_e mra_phase, size_t tid_mra, size_t mra_wid) );
 
 void MRA_set_dfs_f ( void (*f)(char** mra_dfs_matrix, size_t chunks, size_t workers_mra, int replicas) );
 
-void MRA_set_map_mra_output_f ( int (*f)(size_t mid, size_t rid) );
+void MRA_set_map_mra_output_f ( int (*f)(size_t mra_mid, size_t mra_rid) );
 
 // MRSG setup
 void MRSG_user_init (void);
 
-void MRSG_set_task_cost_f ( double (*f)(enum mrsg_phase_e mrsg_phase, size_t tid, size_t mrsg_wid) );
+void MRSG_set_task_cost_f ( double (*f)(enum mrsg_phase_e mrsg_phase, size_t tid_mrsg, size_t mrsg_wid) );
 
 void MRSG_set_dfs_f ( void (*f)(char** dfs_matrix, size_t chunks, size_t workers_mrsg, int replicas) );
 
-void MRSG_set_map_output_f ( int (*f)(size_t mid, size_t rid) );
+void MRSG_set_map_output_f ( int (*f)(size_t mrsg_mid, size_t mrsg_rid) );
 
 
 

@@ -49,57 +49,74 @@ int master_mrsg (int argc, char* argv[])
     mrsg_task_info_t  ti;
 
     print_mrsg_config ();
-    XBT_INFO ("JOB BEGIN"); XBT_INFO (" ");
+    XBT_INFO ("JOB BEGIN");
+    XBT_INFO (" ");
 
-        
+
     tasks_log = fopen ("tasks-mrsg.csv", "w");
     fprintf (tasks_log, "task_id,mrsg_phase,worker_id,time,action,shuffle_end\n");
 
     while (job_mrsg.tasks_pending[MRSG_MAP] + job_mrsg.tasks_pending[MRSG_REDUCE] > 0)
     {
-	    msg = NULL;
-			status = receive (&msg, MASTER_MRSG_MAILBOX);
-			if (status == MSG_OK)
-				{
-	    		worker_mrsg = MSG_task_get_source (msg);
-	    		mrsg_wid = get_mrsg_worker_id (worker_mrsg);
+        msg = NULL;
+        status = receive (&msg, MASTER_MRSG_MAILBOX);
+        if (status == MSG_OK)
+        {
+            worker_mrsg = MSG_task_get_source (msg);
+            mrsg_wid = get_mrsg_worker_id (worker_mrsg);
 
-	    		if (mrsg_message_is (msg, SMS_HEARTBEAT_MRSG))
-	    			{
-							mrsg_heartbeat = &job_mrsg.mrsg_heartbeats[mrsg_wid];
-							if (is_straggler_mrsg (worker_mrsg))
-								{
-									set_mrsg_speculative_tasks (worker_mrsg);
-								}
-							else
-								{
-									if (mrsg_heartbeat->slots_av[MRSG_MAP] > 0)
-											send_map_to_mrsg_worker (worker_mrsg);
+            if (mrsg_message_is (msg, SMS_HEARTBEAT_MRSG))
+            {
+    /*        #ifdef VERBOSE
+              XBT_INFO("HEARTBEAT_MRSG: %s > %s ", SMS_HEARTBEAT_MRSG, MSG_host_get_name (config_mrsg.workers_mrsg[mrsg_wid]));
+            #endif */
+                mrsg_heartbeat = &job_mrsg.mrsg_heartbeats[mrsg_wid];
+                if (is_straggler_mrsg (worker_mrsg))
+                {
+                    set_mrsg_speculative_tasks (worker_mrsg);
+                }
+                else
+                {
+                    if (mrsg_heartbeat->slots_av[MRSG_MAP] > 0)
+                        send_map_to_mrsg_worker (worker_mrsg);
 
-									if (mrsg_heartbeat->slots_av[MRSG_REDUCE] > 0)
-											send_reduce_to_mrsg_worker (worker_mrsg);
-								}
-						}
-	    		else if (mrsg_message_is (msg, SMS_TASK_MRSG_DONE))
-	    			{
-							ti = (mrsg_task_info_t) MSG_task_get_data (msg);
+                    if (mrsg_heartbeat->slots_av[MRSG_REDUCE] > 0)
+                        send_reduce_to_mrsg_worker (worker_mrsg);
+                }
+            }
+            else if (mrsg_message_is (msg, SMS_TASK_MRSG_DONE))
+            {
+                ti = (mrsg_task_info_t) MSG_task_get_data (msg);
 
-							if (job_mrsg.task_status[ti->mrsg_phase][ti->mrsg_tid] != T_STATUS_MRSG_DONE)
-								{
-		    					job_mrsg.task_status[ti->mrsg_phase][ti->mrsg_tid] = T_STATUS_MRSG_DONE;
-		    					finish_all_mrsg_task_copies (ti);
-		    					job_mrsg.tasks_pending[ti->mrsg_phase]--;
-		    					if (job_mrsg.tasks_pending[ti->mrsg_phase] <= 0)
-		    						{
-											XBT_INFO (" ");
-											XBT_INFO ("%s PHASE DONE", (ti->mrsg_phase==MRSG_MAP?"MRSG_MAP":"MRSG_REDUCE"));
-											XBT_INFO (" ");
-		    						}
-								}
-							xbt_free_ref (&ti);
-	    			}
-	    		MSG_task_destroy (msg);
-			}
+                if (job_mrsg.task_status[ti->mrsg_phase][ti->mrsg_tid] != T_STATUS_MRSG_DONE)
+                {
+                    job_mrsg.task_status[ti->mrsg_phase][ti->mrsg_tid] = T_STATUS_MRSG_DONE;
+                    finish_all_mrsg_task_copies (ti);
+                    job_mrsg.tasks_pending[ti->mrsg_phase]--;
+                    if (job_mrsg.tasks_pending[ti->mrsg_phase] <= 0)
+                    {
+                             XBT_INFO (" ");
+                            if(ti->mrsg_phase==MRSG_MAP)
+                            {
+                                stats_mrsg.map_time=MSG_get_clock ();
+                                XBT_INFO ("MRSG_MAP PHASE DONE");
+                                XBT_INFO (" ");
+                            }
+                            else
+                            {
+                                stats_mrsg.reduce_time = MSG_get_clock () - stats_mrsg.map_time;
+                                XBT_INFO ("MRSG_REDUCE PHASE DONE");
+                                XBT_INFO (" ");
+                            }
+                    //    XBT_INFO (" ");
+                    //    XBT_INFO ("%s PHASE DONE", (ti->mrsg_phase==MRSG_MAP?"MRSG_MAP":"MRSG_REDUCE"));
+                    //    XBT_INFO (" ");
+                    }
+                }
+                xbt_free_ref (&ti);
+            }
+            MSG_task_destroy (msg);
+        }
     }
 
     fclose (tasks_log);
@@ -110,7 +127,7 @@ int master_mrsg (int argc, char* argv[])
     print_mrsg_stats ();
     XBT_INFO ("JOB END");
 
-    return 0;
+    return 1 ;
 }
 
 /** @brief  Print the job configuration. */
@@ -144,6 +161,8 @@ static void print_mrsg_stats (void)
     XBT_INFO ("total speculative maps: %d", stats_mrsg.map_spec_mrsg_l + stats_mrsg.map_spec_mrsg_r);
     XBT_INFO ("normal reduces: %d", stats_mrsg.reduce_mrsg_normal);
     XBT_INFO ("speculative reduces: %d", stats_mrsg.reduce_mrsg_spec);
+    XBT_INFO ("MAP Time: %fs",stats_mrsg.map_time);
+    XBT_INFO ("REDUCE Time: %fs",stats_mrsg.reduce_time);
     XBT_INFO (" ");
 }
 
@@ -162,7 +181,7 @@ static int is_straggler_mrsg (msg_host_t worker_mrsg)
     task_count = (config_mrsg.mrsg_slots[MRSG_MAP] + config_mrsg.mrsg_slots[MRSG_REDUCE]) - (job_mrsg.mrsg_heartbeats[mrsg_wid].slots_av[MRSG_MAP] + job_mrsg.mrsg_heartbeats[mrsg_wid].slots_av[MRSG_REDUCE]);
 
     if (MSG_get_host_speed (worker_mrsg) < config_mrsg.grid_average_speed && task_count > 0)
-	return 1;
+        return 1;
 
     return 0;
 }
@@ -179,7 +198,7 @@ static int task_time_elapsed_mrsg (msg_task_t mrsg_task)
     ti = (mrsg_task_info_t) MSG_task_get_data (mrsg_task);
 
     return (MSG_task_get_compute_duration (mrsg_task) - MSG_task_get_remaining_computation (mrsg_task))
-	/ MSG_get_host_speed (config_mrsg.workers_mrsg[ti->mrsg_wid]);
+           / MSG_get_host_speed (config_mrsg.workers_mrsg[ti->mrsg_wid]);
 }
 
 /**
@@ -196,32 +215,32 @@ static void set_mrsg_speculative_tasks (msg_host_t worker_mrsg)
 
     if (job_mrsg.mrsg_heartbeats[mrsg_wid].slots_av[MRSG_MAP] < config_mrsg.mrsg_slots[MRSG_MAP])
     {
-	for (tid = 0; tid < config_mrsg.amount_of_tasks_mrsg[MRSG_MAP]; tid++)
-	{
-	    if (job_mrsg.task_list[MRSG_MAP][tid][0] != NULL)
-	    {
-		ti = (mrsg_task_info_t) MSG_task_get_data (job_mrsg.task_list[MRSG_MAP][tid][0]);
-		if (ti->mrsg_wid == mrsg_wid && task_time_elapsed_mrsg (job_mrsg.task_list[MRSG_MAP][tid][0]) > 60)
-		{
-		    job_mrsg.task_status[MRSG_MAP][tid] = T_STATUS_MRSG_TIP_SLOW;
-		}
-	    }
-	}
+        for (tid = 0; tid < config_mrsg.amount_of_tasks_mrsg[MRSG_MAP]; tid++)
+        {
+            if (job_mrsg.task_list[MRSG_MAP][tid][0] != NULL)
+            {
+                ti = (mrsg_task_info_t) MSG_task_get_data (job_mrsg.task_list[MRSG_MAP][tid][0]);
+                if (ti->mrsg_wid == mrsg_wid && task_time_elapsed_mrsg (job_mrsg.task_list[MRSG_MAP][tid][0]) > 60)
+                {
+                    job_mrsg.task_status[MRSG_MAP][tid] = T_STATUS_MRSG_TIP_SLOW;
+                }
+            }
+        }
     }
 
     if (job_mrsg.mrsg_heartbeats[mrsg_wid].slots_av[MRSG_REDUCE] < config_mrsg.mrsg_slots[MRSG_REDUCE])
     {
-	for (tid = 0; tid < config_mrsg.amount_of_tasks_mrsg[MRSG_REDUCE]; tid++)
-	{
-	    if (job_mrsg.task_list[MRSG_REDUCE][tid][0] != NULL)
-	    {
-		ti = (mrsg_task_info_t) MSG_task_get_data (job_mrsg.task_list[MRSG_REDUCE][tid][0]);
-		if (ti->mrsg_wid == mrsg_wid && task_time_elapsed_mrsg (job_mrsg.task_list[MRSG_REDUCE][tid][0]) > 60)
-		{
-		    job_mrsg.task_status[MRSG_REDUCE][tid] = T_STATUS_MRSG_TIP_SLOW;
-		}
-	    }
-	}
+        for (tid = 0; tid < config_mrsg.amount_of_tasks_mrsg[MRSG_REDUCE]; tid++)
+        {
+            if (job_mrsg.task_list[MRSG_REDUCE][tid][0] != NULL)
+            {
+                ti = (mrsg_task_info_t) MSG_task_get_data (job_mrsg.task_list[MRSG_REDUCE][tid][0]);
+                if (ti->mrsg_wid == mrsg_wid && task_time_elapsed_mrsg (job_mrsg.task_list[MRSG_REDUCE][tid][0]) > 60)
+                {
+                    job_mrsg.task_status[MRSG_REDUCE][tid] = T_STATUS_MRSG_TIP_SLOW;
+                }
+            }
+        }
     }
 }
 
@@ -239,7 +258,7 @@ static void send_map_to_mrsg_worker (msg_host_t dest)
     size_t  mrsg_wid;
 
     if (job_mrsg.tasks_pending[MRSG_MAP] <= 0)
-	return;
+        return;
 
     enum { LOCAL, REMOTE, LOCAL_SPEC, REMOTE_SPEC, NO_TASK };
     task_type = NO_TASK;
@@ -249,64 +268,65 @@ static void send_map_to_mrsg_worker (msg_host_t dest)
     /* Look for a task for the worker. */
     for (chunk = 0; chunk < config_mrsg.mrsg_chunk_count; chunk++)
     {
-	if (job_mrsg.task_status[MRSG_MAP][chunk] == T_STATUS_MRSG_PENDING)
-	{
-	    if (chunk_owner_mrsg[chunk][mrsg_wid])
-	    {
-		task_type = LOCAL;
-		tid = chunk;
-		break;
-	    }
-	    else
-	    {
-		task_type = REMOTE;
-		tid = chunk;
-	    }
-	}
-	else if (job_mrsg.task_status[MRSG_MAP][chunk] == T_STATUS_MRSG_TIP_SLOW
-		&& task_type > REMOTE
-		&& job_mrsg.task_instances[MRSG_MAP][chunk] < 2)
-	{
-	    if (chunk_owner_mrsg[chunk][mrsg_wid])
-	    {
-		task_type = LOCAL_SPEC;
-		tid = chunk;
-	    }
-	    else if (task_type > LOCAL_SPEC)
-	    {
-		task_type = REMOTE_SPEC;
-		tid = chunk;
-	    }
-	}
+        if (job_mrsg.task_status[MRSG_MAP][chunk] == T_STATUS_MRSG_PENDING)
+        {
+            if (chunk_owner_mrsg[chunk][mrsg_wid])
+            {
+                task_type = LOCAL;
+                tid = chunk;
+                break;
+            }
+            else
+            {
+                task_type = REMOTE;
+                tid = chunk;
+            }
+        }
+        else if (job_mrsg.task_status[MRSG_MAP][chunk] == T_STATUS_MRSG_TIP_SLOW
+                 && task_type > REMOTE
+                 && job_mrsg.task_instances[MRSG_MAP][chunk] < 2)
+        {
+            if (chunk_owner_mrsg[chunk][mrsg_wid])
+            {
+                task_type = LOCAL_SPEC;
+                tid = chunk;
+            }
+            else if (task_type > LOCAL_SPEC)
+            {
+                task_type = REMOTE_SPEC;
+                tid = chunk;
+            }
+        }
     }
 
     switch (task_type)
     {
-	case LOCAL:
-	    flags = "";
-	    sid = mrsg_wid;
-	    stats_mrsg.map_local_mrsg++;
-	    break;
+    case LOCAL:
+        flags = "";
+        sid = mrsg_wid;
+        stats_mrsg.map_local_mrsg++;
+        break;
 
-	case REMOTE:
-	    flags = "(non-local)";
-	    sid = find_random_chunk_owner_mrsg (tid);
-	    stats_mrsg.map_remote_mrsg++;
-	    break;
+    case REMOTE:
+        flags = "(non-local)";
+        sid = find_random_chunk_owner_mrsg (tid);
+        stats_mrsg.map_remote_mrsg++;
+        break;
 
-	case LOCAL_SPEC:
-	    flags = "(speculative)";
-	    sid = mrsg_wid;
-	    stats_mrsg.map_spec_mrsg_l++;
-	    break;
+    case LOCAL_SPEC:
+        flags = "(speculative)";
+        sid = mrsg_wid;
+        stats_mrsg.map_spec_mrsg_l++;
+        break;
 
-	case REMOTE_SPEC:
-	    flags = "(non-local, speculative)";
-	    sid = find_random_chunk_owner_mrsg (tid);
-	    stats_mrsg.map_spec_mrsg_r++;
-	    break;
+    case REMOTE_SPEC:
+        flags = "(non-local, speculative)";
+        sid = find_random_chunk_owner_mrsg (tid);
+        stats_mrsg.map_spec_mrsg_r++;
+        break;
 
-	default: return;
+    default:
+        return;
     }
 
     XBT_INFO ("map %zu assigned to %s %s", tid, MSG_host_get_name (dest), flags);
@@ -326,40 +346,41 @@ static void send_reduce_to_mrsg_worker (msg_host_t dest)
     size_t  tid = NONE;
 
     if (job_mrsg.tasks_pending[MRSG_REDUCE] <= 0 || (float)job_mrsg.tasks_pending[MRSG_MAP]/config_mrsg.amount_of_tasks_mrsg[MRSG_MAP] > 0.9)
-	return;
+        return;
 
     enum { NORMAL, SPECULATIVE, NO_TASK };
     task_type = NO_TASK;
 
     for (t = 0; t < config_mrsg.amount_of_tasks_mrsg[MRSG_REDUCE]; t++)
     {
-	if (job_mrsg.task_status[MRSG_REDUCE][t] == T_STATUS_MRSG_PENDING)
-	{
-	    task_type = NORMAL;
-	    tid = t;
-	    break;
-	}
-	else if (job_mrsg.task_status[MRSG_REDUCE][t] == T_STATUS_MRSG_TIP_SLOW
-		&& job_mrsg.task_instances[MRSG_REDUCE][t] < 2)
-	{
-	    task_type = SPECULATIVE;
-	    tid = t;
-	}
+        if (job_mrsg.task_status[MRSG_REDUCE][t] == T_STATUS_MRSG_PENDING)
+        {
+            task_type = NORMAL;
+            tid = t;
+            break;
+        }
+        else if (job_mrsg.task_status[MRSG_REDUCE][t] == T_STATUS_MRSG_TIP_SLOW
+                 && job_mrsg.task_instances[MRSG_REDUCE][t] < 2)
+        {
+            task_type = SPECULATIVE;
+            tid = t;
+        }
     }
 
     switch (task_type)
     {
-	case NORMAL:
-	    flags = "";
-	    stats_mrsg.reduce_mrsg_normal++;
-	    break;
+    case NORMAL:
+        flags = "";
+        stats_mrsg.reduce_mrsg_normal++;
+        break;
 
-	case SPECULATIVE:
-	    flags = "(speculative)";
-	    stats_mrsg.reduce_mrsg_spec++;
-	    break;
+    case SPECULATIVE:
+        flags = "(speculative)";
+        stats_mrsg.reduce_mrsg_spec++;
+        break;
 
-	default: return;
+    default:
+        return;
     }
 
     XBT_INFO ("reduce %zu assigned to %s %s", tid, MSG_host_get_name (dest), flags);
@@ -387,6 +408,11 @@ static void send_mrsg_task (enum mrsg_phase_e mrsg_phase, size_t tid, size_t dat
 
     cpu_required = user_mrsg.task_cost_f (mrsg_phase, tid, mrsg_wid);
 
+		if ( mrsg_phase == MRSG_REDUCE )
+		{
+		  cpu_required *= config_mrsg.mrsg_chunk_count;
+		}
+
     task_info = xbt_new (struct mrsg_task_info_s, 1);
     mrsg_task = MSG_task_create (SMS_TASK_MRSG, cpu_required, 0.0, (void*) task_info);
 
@@ -401,17 +427,17 @@ static void send_mrsg_task (enum mrsg_phase_e mrsg_phase, size_t tid, size_t dat
     MSG_task_set_category (mrsg_task, (mrsg_phase==MRSG_MAP?"MRSG_MAP":"MRSG_REDUCE"));
 
     if (job_mrsg.task_status[mrsg_phase][tid] != T_STATUS_MRSG_TIP_SLOW)
-	job_mrsg.task_status[mrsg_phase][tid] = T_STATUS_MRSG_TIP;
+        job_mrsg.task_status[mrsg_phase][tid] = T_STATUS_MRSG_TIP;
 
     job_mrsg.mrsg_heartbeats[mrsg_wid].slots_av[mrsg_phase]--;
 
     for (i = 0; i < MAX_SPECULATIVE_COPIES; i++)
     {
-	if (job_mrsg.task_list[mrsg_phase][tid][i] == NULL)
-	{
-	    job_mrsg.task_list[mrsg_phase][tid][i] = mrsg_task;
-	    break;
-	}
+        if (job_mrsg.task_list[mrsg_phase][tid][i] == NULL)
+        {
+            job_mrsg.task_list[mrsg_phase][tid][i] = mrsg_task;
+            break;
+        }
     }
 
     fprintf (tasks_log, "%d_%zu_%d,%s,%zu,%.3f,START,\n", mrsg_phase, tid, i, (mrsg_phase==MRSG_MAP?"MRSG_MAP":"MRSG_REDUCE"), mrsg_wid, MSG_get_clock ());
@@ -438,13 +464,12 @@ static void finish_all_mrsg_task_copies (mrsg_task_info_t ti)
 
     for (i = 0; i < MAX_SPECULATIVE_COPIES; i++)
     {
-	if (job_mrsg.task_list[mrsg_phase][tid][i] != NULL)
-	{
-	    //MSG_task_cancel (job_mrsg.task_list[phase][tid][i]);
-	    MSG_task_destroy (job_mrsg.task_list[mrsg_phase][tid][i]);
-	    job_mrsg.task_list[mrsg_phase][tid][i] = NULL;
-	    fprintf (tasks_log, "%d_%zu_%d,%s,%zu,%.3f,END,%.3f\n", ti->mrsg_phase, tid, i, (ti->mrsg_phase==MRSG_MAP?"MRSG_MAP":"MRSG_REDUCE"), ti->mrsg_wid, MSG_get_clock (), ti->shuffle_mrsg_end);
-	}
+        if (job_mrsg.task_list[mrsg_phase][tid][i] != NULL)
+        {
+            //MSG_task_cancel (job_mrsg.task_list[phase][tid][i]);
+            MSG_task_destroy (job_mrsg.task_list[mrsg_phase][tid][i]);
+            job_mrsg.task_list[mrsg_phase][tid][i] = NULL;
+            fprintf (tasks_log, "%d_%zu_%d,%s,%zu,%.3f,END,%.3f\n", ti->mrsg_phase, tid, i, (ti->mrsg_phase==MRSG_MAP?"MRSG_MAP":"MRSG_REDUCE"), ti->mrsg_wid, MSG_get_clock (), ti->shuffle_mrsg_end);
+        }
     }
 }
-

@@ -15,7 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with BigHybrid, MRSG and MRA++.  If not, see <http://www.gnu.org/licenses/>. */
 
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
 #include <msg/msg.h>
 #include <xbt/sysdep.h>
@@ -34,9 +34,9 @@ along with BigHybrid, MRSG and MRA++.  If not, see <http://www.gnu.org/licenses/
 
 XBT_LOG_NEW_DEFAULT_CATEGORY (msg_test, "BIGHYBRID");
 
-#define MAX_LINE_SIZE 256
+#define MAX_LINE_SIZE 1024
 
-// MRA 
+// MRA
 int master_mra (int argc, char *argv[]);
 int worker_mra (int argc, char *argv[]);
 static void check_config_mra (void);
@@ -76,7 +76,7 @@ static void read_bighybrid_config_file (const char* file_name);
  * @param  depl  	The path/name of the MRA deploy file.
  * @param  conf  	The path/name of the MRA configuration file.
  */
- 
+
 
 int BIGHYBRID_main (const char* plat, const char* depl, const char* conf, const char* vc_file)
 {
@@ -91,31 +91,35 @@ int BIGHYBRID_main (const char* plat, const char* depl, const char* conf, const 
 		"--cfg=tracing/uncategorized:yes",
 		"--cfg=viva/categorized:cat.plist",
 		"--cfg=viva/uncategorized:uncat.plist"
-    }; 
+    };
 
  		msg_error_t  res_bighybrid = MSG_OK;
 
-    
+
     config_mra.initialized = 0;
     config_mrsg.initialized = 0;
-	  
+
     check_config_mra ();
     check_config_mrsg ();
 
 //Initialize MRA and MRSG
-    
+
     MSG_init (&argc, argv);
-    
-    
+
+
     res_bighybrid = run_hybrid_simulation (plat, depl, conf, vc_file);
 
- 
-    if (res_bighybrid == MSG_OK)     	
-  		return 0;
-    else
-	  	return 1;
-			
 
+    if (res_bighybrid == MSG_OK && job_mrsg.finished == 1 && job_mra.finished == 1)
+     {
+       XBT_INFO("RETURNS 0!!!!!!!;");
+  		return 0;
+     }
+    else{
+       XBT_INFO("RETURNS 1!!!!!!!!;");
+	  	return 1;
+      } 
+      
 }
 
 /**
@@ -147,11 +151,13 @@ static msg_error_t run_hybrid_simulation (const char* platform_file, const char*
     msg_error_t  res_bighybrid = MSG_OK;
 
     read_bighybrid_config_file (bighybrid_config_file);
-		
+
 		init_mra_vc (vc_file_name);
+		
+		read_bandwidth_mra (platform_file);
 
     MSG_create_environment (platform_file);
-     
+
     // for tracing purposes..
    TRACE_category_with_color ("MRA_MAP", "1 0 0");
    TRACE_category_with_color ("MRA_REDUCE", "0 0 1");
@@ -161,14 +167,14 @@ static msg_error_t run_hybrid_simulation (const char* platform_file, const char*
 
     MSG_function_register ("master_mra", master_mra);
     MSG_function_register ("master_mrsg", master_mrsg);
-    MSG_function_register ("worker_mra", worker_mra);   
+    MSG_function_register ("worker_mra", worker_mra);
     MSG_function_register ("worker_mrsg", worker_mrsg);
-    
+
     MSG_launch_application (deploy_file);
 
     init_mr_mrsg_config (bighybrid_config_file);
     init_mr_mra_config (bighybrid_config_file);
-		
+
     res_bighybrid = MSG_main ();
 
 		free_mra_global_mem ();
@@ -192,17 +198,17 @@ static void init_mr_mra_config (const char* bighybrid_config_file)
     distribute_data_mra ();
 }
 
-/** 
- * @brief Initialize the Volunteer Computing Traces. 
+/**
+ * @brief Initialize the Volunteer Computing Traces.
  * @param vc_file_name
- * 
+ *
  */
 
 static void init_mra_vc (const char* vc_file_name){
-     
+
     int n_line;
     n_line = mra_vc_prep_traces (vc_file_name);
-    read_mra_vc_config_file (vc_file_name, n_line);    
+    read_mra_vc_config_file (vc_file_name, n_line);
 }
 
 /*
@@ -221,17 +227,17 @@ static void init_mr_mrsg_config (const char* bighybrid_config_file)
 
 
 /*
-* @brief Reads config file and creates a vector to each node with the availability type, and start and end times. 
+* @brief Reads config file and creates a vector to each node with the availability type, and start and end times.
 */
 static int read_mra_vc_config_file (const char* vc_file_name, int n_line)
-{	
+{
     int   i;
-    /* Allocate memory for the volunteer computing matrix. */     
+    /* Allocate memory for the volunteer computing matrix. */
    	vc_node = xbt_new(int*, (n_line * sizeof (int)));
    	vc_type = xbt_new(int*, (n_line * sizeof (int)));
    	vc_start = xbt_new(long double*, (n_line * sizeof (long double)));
    	vc_end = xbt_new(long double*, (n_line * sizeof (long double)));
-   	/* Allocate memory for the elements of volunteer computing matrix. */   
+   	/* Allocate memory for the elements of volunteer computing matrix. */
     for (i = 0; i < (n_line + 1); i++)
     {
      		vc_node[i] = xbt_new(int, (sizeof (int)));
@@ -239,28 +245,28 @@ static int read_mra_vc_config_file (const char* vc_file_name, int n_line)
      		vc_start[i] = xbt_new(long double, (sizeof (long double)));
      		vc_end[i] = xbt_new(long double, (sizeof (long double)));
     }
-     
+
     VC_TRACE *ptr_one;
     FILE* vc_file;
-       
-    ptr_one = (VC_TRACE *) malloc(n_line * sizeof(VC_TRACE)); 
+
+    ptr_one = (VC_TRACE *) malloc(n_line * sizeof(VC_TRACE));
     vc_file = fopen (vc_file_name, "r");
- 
+
     i=0;
     while(!feof(vc_file))
     {
         fscanf(vc_file, "%d,%d,%Lf,%Lf", &ptr_one->mra_vc_node_id, &ptr_one->mra_vc_status_type,
                                   &ptr_one->mra_vc_start, &ptr_one->mra_vc_end);
-                                 
+
         vc_node[i][0] = ptr_one->mra_vc_node_id;
         vc_type[i][0] = ptr_one->mra_vc_status_type;
         vc_start[i][0] = ptr_one->mra_vc_start;
-        vc_end[i][0]= ptr_one->mra_vc_end;        
-    		i++; 		
+        vc_end[i][0]= ptr_one->mra_vc_end;
+    		i++;
     }
 
     return 0;
-    
+
     fclose(vc_file);
 }
 
@@ -271,15 +277,15 @@ static int read_mra_vc_config_file (const char* vc_file_name, int n_line)
 static int mra_vc_prep_traces (const char* vc_file_name)
 {
 
-    int n_line = 0;  
-    char c;  
-    FILE* file;  
+    int n_line = 0;
+    char c;
+    FILE* file;
     /* Read the user configuration file. */
     file = fopen (vc_file_name, "r");
- 
+
     // Extract characters from file and store in character n_line
     for (c = getc(file); c != EOF; c = getc(file)){
-        if (c == '\n') 
+        if (c == '\n')
             n_line++;
   			}
         fclose(file);
@@ -306,7 +312,7 @@ static void read_bighybrid_config_file (const char* file_name)
     config_mra.mra_slots[MRA_REDUCE] = 2;
     config_mra.Fg=1;
     config_mra.mra_perc=100;
-    
+
    /* Set the default MRSG configuration. */
     config_mrsg.mrsg_chunk_size = 67108864;
     config_mrsg.mrsg_chunk_count = 0;
@@ -357,6 +363,14 @@ static void read_bighybrid_config_file (const char* file_name)
 	{
 	    fscanf (file, "%d", &config_mra.mra_slots[MRA_REDUCE]);
 	}
+	else if ( strcmp (property, "mra_map_task_cost") == 0 )
+	{
+	    fscanf (file, "%lg", &config_mra.mra_map_task_cost);
+	}
+	else if ( strcmp (property, "mra_reduce_task_cost") == 0 )
+	{
+	    fscanf (file, "%lg", &config_mra.mra_reduce_task_cost);
+	}
 	else if ( strcmp (property, "perc_num_volatile_node") == 0 )
 	{
 	    fscanf (file, "%lg", &config_mra.perc_vc_node);
@@ -364,7 +378,7 @@ static void read_bighybrid_config_file (const char* file_name)
 	else if ( strcmp (property, "failure_timeout") == 0 )
 	{
 	    fscanf (file, "%lg", &config_mra.failure_timeout_conf);
-	}	
+	}
 	else if ( strcmp (property, "mrsg_chunk_size") == 0 )
 	{
 	    fscanf (file, "%lg", &config_mrsg.mrsg_chunk_size);
@@ -377,6 +391,14 @@ static void read_bighybrid_config_file (const char* file_name)
 	else if ( strcmp (property, "mrsg_dfs_replicas") == 0 )
 	{
 	    fscanf (file, "%d", &config_mrsg.mrsg_chunk_replicas);
+	}
+		else if ( strcmp (property, "mrsg_map_task_cost") == 0 )
+	{
+	    fscanf (file, "%lg", &config_mrsg.mrsg_map_task_cost);
+	}
+	else if ( strcmp (property, "mrsg_reduce_task_cost") == 0 )
+	{
+	    fscanf (file, "%lg", &config_mrsg.mrsg_reduce_task_cost);
 	}
 	else if ( strcmp (property, "mrsg_map_slots") == 0 )
 	{
@@ -411,7 +433,7 @@ static void read_bighybrid_config_file (const char* file_name)
     xbt_assert (config_mra.mra_slots[MRA_MAP] > 0, "MRA_Map slots must be greater than zero");
     xbt_assert (config_mra.amount_of_tasks_mra[MRA_REDUCE] >= 0, "The number of MRA_reduce tasks can't be negative");
     xbt_assert (config_mra.mra_slots[MRA_REDUCE] > 0, "MRA_Reduce slots must be greater than zero");
-    
+
     /* Assert the MRSG configuration values. */
 
     xbt_assert (config_mrsg.mrsg_chunk_size > 0, "Chunk size must be greater than zero");
@@ -552,27 +574,40 @@ static void init_job_mra (void)
     job_mra.task_status[MRA_MAP] = xbt_new0 (int, config_mra.amount_of_tasks_mra[MRA_MAP]);
     job_mra.task_instances[MRA_MAP] = xbt_new0 (int, config_mra.amount_of_tasks_mra[MRA_MAP]);
     job_mra.task_list[MRA_MAP] = xbt_new0 (msg_task_t*, config_mra.amount_of_tasks_mra[MRA_MAP]);
-    for (i = 0; i < config_mra.amount_of_tasks_mra[MRA_MAP]; i++)
+    job_mra.mra_task_dist[MRA_MAP] = xbt_new (int*, (config_mra.mra_number_of_workers * config_mra.amount_of_tasks_mra[MRA_MAP]) * (sizeof (int)));
+    for (i = 0; i < config_mra.amount_of_tasks_mra[MRA_MAP] ; i++)
+    {
 	  job_mra.task_list[MRA_MAP][i] = xbt_new0 (msg_task_t, MAX_SPECULATIVE_COPIES);
-	  
+    }
+    for (i = 0; i < config_mra.mra_number_of_workers; i++)
+    {
+    job_mra.mra_task_dist[MRA_MAP][i] = xbt_new0 (int, (config_mra.mra_number_of_workers * config_mra.amount_of_tasks_mra[MRA_MAP]) * (sizeof (int)));	  
+    }
     /* Initialize Reduce tasks number. */
     if (config_mra.Fg != 1) {
     		config_mra.amount_of_tasks_mra[MRA_REDUCE] = config_mra.Fg * config_mra.mra_number_of_workers;
     		}
-     
-        
+
+
     job_mra.map_output = xbt_new (size_t*, config_mra.mra_number_of_workers);
     for (i = 0; i < config_mra.mra_number_of_workers; i++)
 	  job_mra.map_output[i] = xbt_new0 (size_t, config_mra.amount_of_tasks_mra[MRA_REDUCE]);
 
-    // Initialize reduce information. 
+    // Initialize reduce information.
 
     job_mra.tasks_pending[MRA_REDUCE] = config_mra.amount_of_tasks_mra[MRA_REDUCE];
     job_mra.task_status[MRA_REDUCE] = xbt_new0 (int, config_mra.amount_of_tasks_mra[MRA_REDUCE]);
     job_mra.task_instances[MRA_REDUCE] = xbt_new0 (int, config_mra.amount_of_tasks_mra[MRA_REDUCE]);
     job_mra.task_list[MRA_REDUCE] = xbt_new0 (msg_task_t*, config_mra.amount_of_tasks_mra[MRA_REDUCE]);
+    job_mra.mra_task_dist[MRA_REDUCE] = xbt_new (int*,  config_mra.amount_of_tasks_mra[MRA_REDUCE] * (sizeof (int)));
     for (i = 0; i < config_mra.amount_of_tasks_mra[MRA_REDUCE]; i++)
+    {
 	  job_mra.task_list[MRA_REDUCE][i] = xbt_new0 (msg_task_t, MAX_SPECULATIVE_COPIES);
+	  }
+	  for (i = 0; i < config_mra.mra_number_of_workers ; i++)
+    {
+	  job_mra.mra_task_dist[MRA_REDUCE][i] = xbt_new0 (int, (config_mra.mra_number_of_workers * config_mra.amount_of_tasks_mra[MRA_REDUCE]) * (sizeof (int)));
+	  }
 	 // Configuracao dos Reduces Termina aqui */
 
 }
@@ -655,10 +690,10 @@ static void init_mrsg_stats (void)
  */
 static void free_mra_global_mem (void)
 {
-    size_t  imra;
+    size_t  i;
 
-    for (imra = 0; imra < config_mra.mra_chunk_count; imra++)
-	xbt_free_ref (&chunk_owner_mra[imra]);
+for (i = 0; i < config_mra.mra_chunk_count; i++)
+	xbt_free_ref (&chunk_owner_mra[i]);
     xbt_free_ref (&chunk_owner_mra);
 
     xbt_free_ref (&config_mra.workers_mra);
@@ -667,12 +702,17 @@ static void free_mra_global_mem (void)
     xbt_free_ref (&job_mra.task_status[MRA_REDUCE]);
     xbt_free_ref (&job_mra.task_instances[MRA_REDUCE]);
     xbt_free_ref (&job_mra.mra_heartbeats);
-    for (imra = 0; imra < config_mra.amount_of_tasks_mra[MRA_MAP]; imra++)
-	xbt_free_ref (&job_mra.task_list[MRA_MAP][imra]);
+    for (i = 0; i < config_mra.amount_of_tasks_mra[MRA_MAP]; i++)
+	xbt_free_ref (&job_mra.task_list[MRA_MAP][i]);
     xbt_free_ref (&job_mra.task_list[MRA_MAP]);
-    for (imra = 0; imra < config_mra.amount_of_tasks_mra[MRA_REDUCE]; imra++)
-	xbt_free_ref (&job_mra.task_list[MRA_REDUCE][imra]);
+    for (i = 0; i < config_mra.amount_of_tasks_mra[MRA_REDUCE]; i++)
+	xbt_free_ref (&job_mra.task_list[MRA_REDUCE][i]);
     xbt_free_ref (&job_mra.task_list[MRA_REDUCE]);
+    for (i = 0; i < config_mra.mra_number_of_workers; i++)
+    {
+      xbt_free_ref (&job_mra.mra_task_dist[MRA_REDUCE][i]);
+      xbt_free_ref (&job_mra.mra_task_dist[MRA_MAP][i]);
+    }
 }
 
 
@@ -700,4 +740,14 @@ static void free_mrsg_global_mem (void)
 	xbt_free_ref (&job_mrsg.task_list[MRSG_REDUCE][imrsg]);
     xbt_free_ref (&job_mrsg.task_list[MRSG_REDUCE]);
 }
+/*static void finish_all_pids (void)
+{
+int 	k, ftm_pid;
 
+for (k=0; k < total_tasks; k++)
+{
+ftm_pid = mra_task_ftm[k].mra_ft_pid[MRA_MAP];
+MSG_process_killall (ftm_pid);
+}
+
+}*/

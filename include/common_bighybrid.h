@@ -101,13 +101,14 @@ enum mrsg_task_status_e {
 
 /** @brief  Information about dist_bruta. */
 struct mra_dist_mang_s {
-			 int min_tot_dist; 
+       int min_tot_dist; 
        int max_tot_dist;
+       int*  total_dist; 
 } mra_dist_manage;
 
 /** @brief  Information sent by the workers with every mra_heartbeat. */
 struct mra_heartbeat_s {
-    int  				slots_av[2];
+    int  slots_av[2];
     long double wid_timestamp; 
 };
 
@@ -124,10 +125,15 @@ struct mra_config_s {
     int            mra_number_of_workers;
     int            mra_slots[2];
     double         mra_perc;
-    int         	 Fg;
-    double				 perc_vc_node;
+    double         cpu_required_reduce_mra;
+    double         cpu_required_map_mra;
+    double 				 mra_map_task_cost;
+    double         mra_reduce_task_cost;
+    int            Fg;
+    double	       perc_vc_node;
     double         failure_timeout_conf;
     int            initialized;
+    double 			   mra_bandwidth;
     msg_host_t*    workers_mra;
 } config_mra;
 
@@ -140,6 +146,7 @@ struct mra_job_s {
     size_t**      	map_output;
     mra_heartbeat_t	mra_heartbeats;
     long double   	wid_timestamp;
+    int**  				mra_task_dist[2];
 } job_mra;
 
 /** @brief  Information sent as the mra_task data. */
@@ -157,20 +164,23 @@ struct mra_task_info_s {
 typedef struct mra_task_info_s* mra_task_info_t;
 
 struct mra_stats_s {
+    enum mra_phase_e  mra_phase;
     int   map_local_mra;
     int   mra_map_remote;
     int   map_spec_mra_l;
     int   map_spec_mra_r;
+    int   mra_map_recovery;
+    int	  mra_reduce_recovery;
     int   reduce_mra_normal;
     int   reduce_mra_spec;
-    int   mra_map_recovery;
-    int		mra_reduce_recovery;
+    double map_time;
+    double reduce_time;
 } stats_mra;
 
 struct mra_user_s {
-    double (*task_mra_cost_f)(enum mra_phase_e mra_phase, size_t tid, size_t mra_wid);
+    double (*task_mra_cost_f)(enum mra_phase_e mra_phase, size_t tid_mra, size_t mra_wid);
     void (*mra_dfs_f)(char** mra_dfs_matrix, size_t chunks, size_t workers_mra, int replicas);
-    int (*map_mra_output_f)(size_t mid, size_t rid);
+    int (*map_mra_output_f)(size_t mra_mid, size_t mra_rid);
 } user_mra;
 
 
@@ -193,6 +203,10 @@ struct mrsg_config_s {
     int            mrsg_number_of_workers;
     int            mrsg_slots[2];
     double         mrsg_perc;
+    double         cpu_required_reduce_mrsg;
+    double         cpu_required_map_mrsg;
+    double 				 mrsg_map_task_cost; 
+    double         mrsg_reduce_task_cost;
     int            initialized;
     msg_host_t*    workers_mrsg;
 } config_mrsg;
@@ -228,14 +242,27 @@ struct mrsg_stats_s {
     int   map_spec_mrsg_r;
     int   reduce_mrsg_normal;
     int   reduce_mrsg_spec;
+    double map_time;
+    double reduce_time;
 } stats_mrsg;
 
 struct mrsg_user_s {
-    double (*task_cost_f)(enum mrsg_phase_e mrsg_phase, size_t tid, size_t mrsg_wid);
+    double (*task_cost_f)(enum mrsg_phase_e mrsg_phase, size_t tid_mrsg, size_t mrsg_wid);
     void (*dfs_f)(char** dfs_matrix, size_t chunks, size_t workers_mrsg, int replicas);
-    int (*map_output_f)(size_t mid, size_t rid);
+    int (*map_output_f)(size_t mrsg_mid, size_t mrsg_rid);
 } user_mrsg;
 
+
+/** 
+ * @brief  Send a message/task.
+ * @param  str      The message.
+ * @param  cpu      The amount of cpu required by the task.
+ * @param  net      The message size in bytes.
+ * @param  data     Any data to attatch to the message.
+ * @param  mailbox  The destination mailbox alias.
+ * @return The MSG status of the operation.
+ */
+msg_error_t mra_send (const char* str, double cpu, double net, void* data, const char* mailbox);
 
 /** 
  * @brief  Send a message/task.
@@ -270,7 +297,17 @@ msg_error_t send_mrsg_sms (const char* str, const char* mailbox);
  * @param  mailbox  The mailbox alias.
  * @return The status of the transfer.
  */
+msg_error_t mra_receive (msg_task_t* msg_mra, const char* mailbox);
+
+
+/** 
+ * @brief  Receive a message/task from a mailbox.
+ * @param  msg      Where to store the received message.
+ * @param  mailbox  The mailbox alias.
+ * @return The status of the transfer.
+ */
 msg_error_t receive (msg_task_t* msg, const char* mailbox);
+
 
 /** 
  * @brief  Compare the message from a task with a string.
@@ -278,26 +315,32 @@ msg_error_t receive (msg_task_t* msg, const char* mailbox);
  * @param  str  The string to compare with.
  * @return A positive value if matches, zero if doesn't.
  */
-int mra_message_is (msg_task_t msg, const char* str);
+int mra_message_is (msg_task_t msg_mra, const char* str);
 int mrsg_message_is (msg_task_t msg, const char* str);
 
 /**
  * @brief  Return the maximum of two values.
  */
-int mra_maxval (int a, int b);
-int mrsg_maxval (int a, int b);
+int mra_maxval (int mra_a, int mra_b);
+int mrsg_maxval (int mrsg_a, int mrsg_b);
 
 /**
  * @brief  Return the Map output size.
  */
-size_t map_mra_output_size (size_t mid);
-size_t map_mrsg_output_size (size_t mid);
+size_t map_mra_output_size (size_t mra_mid);
+size_t map_mrsg_output_size (size_t mrsg_mid);
 
 /**
  * @brief  Return the Reduce input size.
  */
 
-size_t reduce_mra_input_size (size_t rid);
-size_t reduce_mrsg_input_size (size_t rid);
+size_t reduce_mra_input_size (size_t mra_rid);
+size_t reduce_mrsg_input_size (size_t mrsg_rid);
+
+
+/**
+ * @brief  Return the bandwidth.
+ */
+void read_bandwidth_mra (const char* plat);
 
 #endif /* !BIGHYBRID_COMMON_H */
