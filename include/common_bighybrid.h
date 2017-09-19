@@ -18,7 +18,7 @@ along with BigHybrid, MRSG and MRA++.  If not, see <http://www.gnu.org/licenses/
 #ifndef BIGHYBRID_COMMON_H
 #define BIGHYBRID_COMMON_H
 
-#include <msg/msg.h>
+#include <simgrid/msg.h>
 #include <xbt/sysdep.h>
 #include <xbt/log.h>
 #include <xbt/asserts.h>
@@ -41,7 +41,8 @@ double*     avg_task_exec_reduce;
 #define MRA_HEARTBEAT_TIMEOUT 600
 #define MRSG_HEARTBEAT_TIMEOUT 600
 
-
+#define ON 1
+#define OFF -1
 /* Short message names. */
 #define SMS_GET_MRA_CHUNK "SMS-MRA-GC"
 #define SMS_GET_MRSG_CHUNK "SMS-MRSG-GC"
@@ -101,15 +102,15 @@ enum mrsg_task_status_e {
 
 /** @brief  Information about dist_bruta. */
 struct mra_dist_mang_s {
-       int min_tot_dist; 
+       int min_tot_dist;
        int max_tot_dist;
-       int*  total_dist; 
+       int*  total_dist;
 } mra_dist_manage;
 
 /** @brief  Information sent by the workers with every mra_heartbeat. */
 struct mra_heartbeat_s {
     int  slots_av[2];
-    long double wid_timestamp; 
+    long double wid_timestamp;
 };
 
 typedef struct mra_heartbeat_s* mra_heartbeat_t;
@@ -205,11 +206,22 @@ struct mrsg_config_s {
     double         mrsg_perc;
     double         cpu_required_reduce_mrsg;
     double         cpu_required_map_mrsg;
-    double 				 mrsg_map_task_cost; 
+    double 				 mrsg_map_task_cost;
     double         mrsg_reduce_task_cost;
     int            initialized;
     msg_host_t*    workers_mrsg;
 } config_mrsg;
+
+typedef struct {
+  int * listen;
+  int * data_node;
+  int * worker;
+  int workers_on;
+  int * status;
+}task_pid;
+
+task_pid mrsg_task_pid;
+task_pid mra_task_pid;
 
 struct mrsg_job_s {
     int           finished;
@@ -253,7 +265,7 @@ struct mrsg_user_s {
 } user_mrsg;
 
 
-/** 
+/**
  * @brief  Send a message/task.
  * @param  str      The message.
  * @param  cpu      The amount of cpu required by the task.
@@ -264,7 +276,7 @@ struct mrsg_user_s {
  */
 msg_error_t mra_send (const char* str, double cpu, double net, void* data, const char* mailbox);
 
-/** 
+/**
  * @brief  Send a message/task.
  * @param  str      The message.
  * @param  cpu      The amount of cpu required by the task.
@@ -275,7 +287,7 @@ msg_error_t mra_send (const char* str, double cpu, double net, void* data, const
  */
 msg_error_t send (const char* str, double cpu, double net, void* data, const char* mailbox);
 
-/** 
+/**
  * @brief  Send a short message, of size zero.
  * @param  str      The message.
  * @param  mailbox  The destination mailbox alias.
@@ -283,7 +295,7 @@ msg_error_t send (const char* str, double cpu, double net, void* data, const cha
  */
 msg_error_t send_mra_sms (const char* str, const char* mailbox);
 
-/** 
+/**
  * @brief  Send a short message, of size zero.
  * @param  str      The message.
  * @param  mailbox  The destination mailbox alias.
@@ -291,7 +303,7 @@ msg_error_t send_mra_sms (const char* str, const char* mailbox);
  */
 msg_error_t send_mrsg_sms (const char* str, const char* mailbox);
 
-/** 
+/**
  * @brief  Receive a message/task from a mailbox.
  * @param  msg      Where to store the received message.
  * @param  mailbox  The mailbox alias.
@@ -300,7 +312,7 @@ msg_error_t send_mrsg_sms (const char* str, const char* mailbox);
 msg_error_t mra_receive (msg_task_t* msg_mra, const char* mailbox);
 
 
-/** 
+/**
  * @brief  Receive a message/task from a mailbox.
  * @param  msg      Where to store the received message.
  * @param  mailbox  The mailbox alias.
@@ -309,7 +321,7 @@ msg_error_t mra_receive (msg_task_t* msg_mra, const char* mailbox);
 msg_error_t receive (msg_task_t* msg, const char* mailbox);
 
 
-/** 
+/**
  * @brief  Compare the message from a task with a string.
  * @param  msg  The message/task.
  * @param  str  The string to compare with.

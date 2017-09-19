@@ -1,5 +1,0 @@
-<map id="set_mra_speculative_tasks" name="set_mra_speculative_tasks">
-<area shape="rect" id="node2" href="$worker__mra_8c.html#a5c30e22e7fb9c6f78fca445efe8277f6" title="Get the ID of a worker. " alt="" coords="404,5,536,32"/>
-<area shape="rect" id="node3" href="$master__mra_8c.html#a9edca9f9a0027e689c35a1c7f8cd5c27" title="is_straggler_mra" alt="" coords="217,31,335,57"/>
-<area shape="rect" id="node4" href="$master__mra_8c.html#ae022ecd66fc6b19fd3d7fad2856d8565" title="task_time_elapsed_mra" alt="" coords="196,81,356,108"/>
-</map>

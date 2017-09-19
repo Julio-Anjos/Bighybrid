@@ -37,7 +37,6 @@ static void send_map_to_mrsg_worker (msg_host_t dest);
 static void send_reduce_to_mrsg_worker (msg_host_t dest);
 static void send_mrsg_task (enum mrsg_phase_e mrsg_phase, size_t tid, size_t data_src, msg_host_t dest);
 static void finish_all_mrsg_task_copies (mrsg_task_info_t ti);
-
 /** @brief  Main master function. */
 int master_mrsg (int argc, char* argv[])
 {
@@ -51,7 +50,6 @@ int master_mrsg (int argc, char* argv[])
     print_mrsg_config ();
     XBT_INFO ("JOB BEGIN");
     XBT_INFO (" ");
-
 
     tasks_log = fopen ("tasks-mrsg.csv", "w");
     fprintf (tasks_log, "task_id,mrsg_phase,worker_id,time,action,shuffle_end\n");
@@ -107,6 +105,7 @@ int master_mrsg (int argc, char* argv[])
                                 stats_mrsg.reduce_time = MSG_get_clock () - stats_mrsg.map_time;
                                 XBT_INFO ("MRSG_REDUCE PHASE DONE");
                                 XBT_INFO (" ");
+
                             }
                     //    XBT_INFO (" ");
                     //    XBT_INFO ("%s PHASE DONE", (ti->mrsg_phase==MRSG_MAP?"MRSG_MAP":"MRSG_REDUCE"));
@@ -120,11 +119,12 @@ int master_mrsg (int argc, char* argv[])
     }
 
     fclose (tasks_log);
-
     job_mrsg.finished = 1;
+
 
     print_mrsg_config ();
     print_mrsg_stats ();
+  //  mrsg_clear_pids();
     XBT_INFO ("JOB END");
 
     return 1 ;
@@ -161,8 +161,8 @@ static void print_mrsg_stats (void)
     XBT_INFO ("total speculative maps: %d", stats_mrsg.map_spec_mrsg_l + stats_mrsg.map_spec_mrsg_r);
     XBT_INFO ("normal reduces: %d", stats_mrsg.reduce_mrsg_normal);
     XBT_INFO ("speculative reduces: %d", stats_mrsg.reduce_mrsg_spec);
-    XBT_INFO ("MAP Time: %fs",stats_mrsg.map_time);
-    XBT_INFO ("REDUCE Time: %fs",stats_mrsg.reduce_time);
+    XBT_INFO ("Map Time: %fs",stats_mrsg.map_time);
+    XBT_INFO ("Reduce Time: %fs",stats_mrsg.reduce_time);
     XBT_INFO (" ");
 }
 
@@ -180,7 +180,7 @@ static int is_straggler_mrsg (msg_host_t worker_mrsg)
 
     task_count = (config_mrsg.mrsg_slots[MRSG_MAP] + config_mrsg.mrsg_slots[MRSG_REDUCE]) - (job_mrsg.mrsg_heartbeats[mrsg_wid].slots_av[MRSG_MAP] + job_mrsg.mrsg_heartbeats[mrsg_wid].slots_av[MRSG_REDUCE]);
 
-    if (MSG_get_host_speed (worker_mrsg) < config_mrsg.grid_average_speed && task_count > 0)
+    if (MSG_host_get_speed (worker_mrsg) < config_mrsg.grid_average_speed && task_count > 0)
         return 1;
 
     return 0;
@@ -197,8 +197,8 @@ static int task_time_elapsed_mrsg (msg_task_t mrsg_task)
 
     ti = (mrsg_task_info_t) MSG_task_get_data (mrsg_task);
 
-    return (MSG_task_get_compute_duration (mrsg_task) - MSG_task_get_remaining_computation (mrsg_task))
-           / MSG_get_host_speed (config_mrsg.workers_mrsg[ti->mrsg_wid]);
+    return (MSG_task_get_bytes_amount (mrsg_task) - MSG_task_get_flops_amount (mrsg_task))
+           / MSG_host_get_speed (config_mrsg.workers_mrsg[ti->mrsg_wid]);
 }
 
 /**

@@ -28,7 +28,7 @@ msg_error_t mra_send (const char* str, double cpu, double net, void* data, const
     msg_mra = MSG_task_create (str, cpu, net, data);
 
 #ifdef VERBOSE
-    if (!mra_message_is (msg_mra, SMS_HEARTBEAT_MRA)) 
+    if (!mra_message_is (msg_mra, SMS_HEARTBEAT_MRA))
 	    XBT_INFO ("TX (%s): %s", mailbox, str);
 #endif
 
@@ -145,12 +145,12 @@ size_t map_mra_output_size (size_t mra_mid)
 {
     size_t  mra_rid;
     size_t  mra_sum = 0;
-    
+
     for (mra_rid = 0; mra_rid < config_mra.amount_of_tasks_mra[MRA_REDUCE]; mra_rid++)
     {
 	mra_sum += (user_mra.map_mra_output_f (mra_mid, mra_rid));
 	  }
-	    
+
     return mra_sum;
 }
 
@@ -186,7 +186,7 @@ size_t reduce_mra_input_size (size_t mra_rid)
     {
 	mra_sum += (user_mra.map_mra_output_f (mra_mid, mra_rid));
     }
-  XBT_INFO (" MRA_Reduce task %zu sent %zu Bytes",mra_rid,mra_sum); 
+  XBT_INFO (" MRA_Reduce task %zu sent %zu Bytes",mra_rid,mra_sum);
     return mra_sum;
 }
 
@@ -213,7 +213,13 @@ size_t reduce_mrsg_input_size (size_t mrsg_rid)
 */
 void read_bandwidth_mra (const char* plat)
 {
+
 		FILE * xml = fopen(plat,"r");
+    if(xml==NULL)
+    {
+      printf("Error: plat file not found\n");
+      exit(1);
+    }
 	char buff[255];
 	char * token;
 
@@ -226,7 +232,7 @@ void read_bandwidth_mra (const char* plat)
 
 		 	token = strtok(NULL,"=");
 		 	token = strtok(token,s);
-		 	 sscanf(token, "%lf", &config_mra.mra_bandwidth);	
+		 	 sscanf(token, "%lf", &config_mra.mra_bandwidth);
  		 	break;
 		 }
 	}while(fgetc(xml)!=EOF);

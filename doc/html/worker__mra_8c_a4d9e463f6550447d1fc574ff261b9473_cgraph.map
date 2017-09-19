@@ -1,8 +1,0 @@
-<map id="mra_heartbeat" name="mra_heartbeat">
-<area shape="rect" id="node2" href="$worker__mra_8c.html#a5c30e22e7fb9c6f78fca445efe8277f6" title="Get the ID of a worker. " alt="" coords="159,5,291,32"/>
-<area shape="rect" id="node3" href="$common__bighybrid_8c.html#a305ac8e3389f94106990aa3c52c91416" title="Send a short message, of size zero. " alt="" coords="169,56,280,83"/>
-<area shape="rect" id="node7" href="$worker__mra_8c.html#a34b99839dc5ca67da865cd0b75dcc9ee" title="Volatility function from the traces file.. " alt="" coords="167,107,282,133"/>
-<area shape="rect" id="node4" href="$common__bighybrid_8c.html#a385b12669d8faf7b5cdb54c1ae597e1c" title="Send a message/task. " alt="" coords="339,56,389,83"/>
-<area shape="rect" id="node5" href="$common__bighybrid_8c.html#a2595166c31f66208384d3f194dc12dd7" title="Compare the message from a task with a string. " alt="" coords="441,31,562,57"/>
-<area shape="rect" id="node6" href="$common__bighybrid_8c.html#a17b262d1619d68c51081400247c46016" title="mrsg_message_is" alt="" coords="437,81,565,108"/>
-</map>

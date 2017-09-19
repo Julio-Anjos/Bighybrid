@@ -18,7 +18,7 @@ along with MRSG and MRA++.  If not, see <http://www.gnu.org/licenses/>. */
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include <msg/msg.h>
+#include <simgrid/msg.h>
 #include "common_bighybrid.h"
 #include "worker_mra.h"
 #include "dfs_mra.h"
@@ -98,7 +98,7 @@ void default_mra_dfs_f (char** mra_dfs_matrix, size_t chunks, size_t workers_mra
         mra_dfs_dist[owner].mra_dist_fail[MRA_MAP]		= 0;
         mra_dfs_dist[owner].mra_dist_fail[MRA_REDUCE]	= 0;
         mra_dfs_dist[owner].mra_calc_dist							= 0;
-        
+
     }
 
 //    dist_bruta 		= xbt_new (int, 		(config_mra.mra_number_of_workers * sizeof (int)));
@@ -126,7 +126,7 @@ void default_mra_dfs_f (char** mra_dfs_matrix, size_t chunks, size_t workers_mra
     for (owner = 0; owner < config_mra.mra_number_of_workers; owner++)
     {
 
-        mra_dfs_dist->speed = MSG_get_host_speed(config_mra.workers_mra[owner]);
+        mra_dfs_dist->speed = MSG_host_get_speed(config_mra.workers_mra[owner]);
         mra_dfs_dist[owner].speed = mra_dfs_dist->speed;
 
         /* Calculate a capacity fraction  from grid to worker */
@@ -168,9 +168,9 @@ void default_mra_dfs_f (char** mra_dfs_matrix, size_t chunks, size_t workers_mra
     log_avg = fopen ("avg_tasks_map.log", "w");
     for (owner = 0; owner < config_mra.mra_number_of_workers; owner++)
     {
-    
+
        // mra_dfs_dist[owner].mra_dist_data[MRA_MAP] = mra_dfs_dist[owner].dist_bruta;
-    
+
         for (mra_tid=0; mra_tid < config_mra.mra_number_of_workers; mra_tid++)
         {
             if (mra_dfs_dist[owner].dist_bruta == mra_dfs_dist[mra_tid].dist_bruta )
@@ -258,8 +258,8 @@ void default_mra_dfs_f (char** mra_dfs_matrix, size_t chunks, size_t workers_mra
         mra_dfs_het_f.max_dist = mra_dist_manage.max_tot_dist;
         mra_dfs_het_f.min_dist = mra_dist_manage.min_tot_dist;
     }
-    
-    
+
+
     mra_dist_manage.total_dist = xbt_new (int, ((mra_dist_manage.max_tot_dist + 1) * sizeof (int)));
     for (i=0; i < (mra_dist_manage.max_tot_dist + 1); i++)
     {
@@ -303,7 +303,7 @@ void default_mra_dfs_f (char** mra_dfs_matrix, size_t chunks, size_t workers_mra
                     job_mra.mra_task_dist[MRA_MAP][owner][total_chunk] = chunk;
                     chunk++;
 
-                    
+
 //                    fprintf (log,"dist: %u \t dist_b:%u \t ID: %zu \t chunk: %zu \t total_chunk: %u \n",dist, mra_dfs_dist[owner].dist_bruta, owner, chunk, total_chunk);
 			fprintf (log,"dist: %u \t dist_b:%u \t ID: %zu \t chunk: %zu  \n",dist, mra_dfs_dist[owner].dist_bruta, owner, chunk);
                 }
@@ -371,17 +371,17 @@ void mra_replica_f (int *totalOwnedChunks)
         mra_affinity_f(k);
     }
     // Affinity test - End
-    // Test total dist 
+    // Test total dist
     for (i=0; i < (mra_dist_manage.max_tot_dist + 1); i++)
-    {   
+    {
         if (mra_dist_manage.total_dist[i] == config_mra.amount_of_tasks_mra[MRA_MAP])
         {
           dist_test = 1;
         }
     }
-    
-    
-    
+
+
+
     /** @brief Creates a data replica from owner in a same group */
 
     for (owner = 0; owner < config_mra.mra_number_of_workers  ; owner++)
@@ -417,7 +417,7 @@ void mra_replica_f (int *totalOwnedChunks)
     {
         for (chunk = 0; (chunk < config_mra.mra_chunk_count) ; chunk++)
         {
-            if (chunk_owner_mra[chunk][owner] == 1 && mra_dfs_dist[owner].dist_bruta !=0 && dist_test != 1) 
+            if (chunk_owner_mra[chunk][owner] == 1 && mra_dfs_dist[owner].dist_bruta !=0 && dist_test != 1)
             {
                 while (mra_affinity[chunk] < config_mra.mra_chunk_replicas)
                 {
@@ -649,15 +649,15 @@ void ftm_mra_affinity_f (int mra_id_task, size_t mra_ftm_vc_wid)
 {
     int rpl=0, chunk, i=0;
     size_t  mra_wid = mra_ftm_vc_wid;
-    
+
     chunk = job_mra.mra_task_dist[MRA_MAP][mra_ftm_vc_wid][mra_id_task];
-    
+
     while(i < config_mra.mra_number_of_workers )
     {
         if (chunk_owner_mra[chunk][i] == 1 && (mra_ftm_done_s[i].mra_ft_vcstat != VC_FAILURE))
         {
             rpl++;
-        }        
+        }
         i++;
     }
     i=0;
@@ -667,7 +667,7 @@ void ftm_mra_affinity_f (int mra_id_task, size_t mra_ftm_vc_wid)
         {
           chunk_owner_mra[chunk][i] = 1 ;
           //XBT_INFO ("FTM chunk_owner %d and i %d",chunk, i);
-          rpl++;  
+          rpl++;
         }
         else if ((mra_dfs_dist[mra_wid].dist_bruta + 1 == mra_dfs_dist[i].dist_bruta ) && rpl < mra_affinity[chunk] && (mra_ftm_done_s[i].mra_ft_vcstat != VC_FAILURE))
         {
@@ -682,7 +682,7 @@ void ftm_mra_affinity_f (int mra_id_task, size_t mra_ftm_vc_wid)
      }
     mra_affinity[chunk] = rpl;
     //XBT_INFO ("\n FTM Chunk Replica %d : %d restored \n", chunk, mra_affinity[chunk]);
-     
+
 }
 
 /**
@@ -693,25 +693,25 @@ void ftm_mra_affinity_f (int mra_id_task, size_t mra_ftm_vc_wid)
 void ftm_adjust_replica ()
 {
     int chunk, mra_wid;
-    
+
     for (chunk = 0; (chunk < config_mra.mra_chunk_count) ; chunk++)
     {
-      
-    while ((mra_affinity[chunk] < config_mra.mra_chunk_replicas) ) 
+
+    while ((mra_affinity[chunk] < config_mra.mra_chunk_replicas) )
       {
         mra_wid = rand () % config_mra.mra_number_of_workers;
-              
-         while (((mra_ftm_done_s[mra_wid].mra_ft_vcstat == VC_FAILURE ) || (chunk_owner_mra[chunk][mra_wid] == 1)) || mra_dfs_dist[mra_wid].dist_bruta == 0) 
+
+         while (((mra_ftm_done_s[mra_wid].mra_ft_vcstat == VC_FAILURE ) || (chunk_owner_mra[chunk][mra_wid] == 1)) || mra_dfs_dist[mra_wid].dist_bruta == 0)
          {
            mra_wid = rand () % config_mra.mra_number_of_workers;
-         
+
          }
-             
-          chunk_owner_mra[chunk][mra_wid] = 1; 
-          mra_affinity[chunk]++;  
-         // XBT_INFO ("FTM Chunk Replica %d : %d restored on mra_wid %d \n", chunk, mra_affinity[chunk], mra_wid);  
+
+          chunk_owner_mra[chunk][mra_wid] = 1;
+          mra_affinity[chunk]++;
+         // XBT_INFO ("FTM Chunk Replica %d : %d restored on mra_wid %d \n", chunk, mra_affinity[chunk], mra_wid);
        }
-     
+
     }
 }
 
@@ -765,22 +765,22 @@ size_t find_random_mra_chunk_owner (int cid)
         if (chunk_owner_mra[cid][mra_wid] && (mra_ftm_done_s[mra_wid].mra_ft_vcstat != VC_FAILURE))
         {
             owner = mra_wid;
-            
+
             if (replica == 0)
           break;
             else
             replica--;
        }
     }
-   /* if(behavior[mra_wid]== NEW_WID) 
+   /* if(behavior[mra_wid]== NEW_WID)
     {
         xbt_assert (owner != NONE, "MRA_Aborted: chunk %d is missing.", cid);
     }
     else
     { */
-  
+
    xbt_assert (owner != NONE, "MRA_Aborted: chunk %d is missing", cid);
-   
+
    return owner;
 }
 
@@ -792,6 +792,9 @@ int data_node_mra (int argc, char* argv[])
     msg_error_t  status_mra;
     msg_task_t   msg_mra = NULL;
     sprintf (mailbox, DATANODE_MRA_MAILBOX, get_mra_worker_id (MSG_host_self ()));
+
+    size_t wid =get_mra_worker_id (MSG_host_self ())+1 ;
+    mra_task_pid.data_node[wid] = MSG_process_self_PID ();
 
     while (!job_mra.finished)
     {
@@ -841,4 +844,3 @@ static void send_mra_data (msg_task_t msg_mra)
 
     MSG_task_destroy (msg_mra);
 }
-

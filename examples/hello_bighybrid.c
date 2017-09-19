@@ -40,7 +40,7 @@ static void read_mra_config_file (const char* file_name)
     /* Read the user configuration file. */
 
     xbt_assert (file != NULL, "Error reading cofiguration file: %s", file_name);
-    
+
     while ( fscanf (file, "%256s", property) != EOF )
     {
 			if ( strcmp (property, "mra_chunk_size") == 0 )
@@ -73,7 +73,7 @@ static void read_mra_config_file (const char* file_name)
 	    printf ("Error: Property %s is not valid. (in %s)", property, file_name);
 	    exit (1);
 			}
-	    
+
     }
 
     fclose (file);
@@ -90,7 +90,7 @@ static void read_mrsg_config_file (const char* file_name)
     config_mrsg.amount_of_tasks_mrsg[MRSG_REDUCE] = 1;
     config_mrsg.mrsg_slots[MRSG_REDUCE] = 2;
     config_mrsg.mrsg_perc = 100;
-    
+
 
     /* Read the user configuration file. */
 
@@ -178,7 +178,7 @@ double mra_task_cost_function (enum mra_phase_e mra_phase, size_t tid_mra, size_
 {
    double mra_map_required;
    double mra_reduce_required;
-       
+
     switch (mra_phase)
     {
 	case MRA_MAP:
@@ -189,7 +189,7 @@ double mra_task_cost_function (enum mra_phase_e mra_phase, size_t tid_mra, size_
 	case MRA_REDUCE:
 	    config_mra.cpu_required_reduce_mra = config_mra.mra_reduce_task_cost* ((config_mra.mra_chunk_size/(1024 * 1024) *config_mra.mra_perc/100)/config_mra.amount_of_tasks_mra[MRA_REDUCE]);
       mra_reduce_required = config_mra.cpu_required_reduce_mra/config_mra.mra_slots[MRA_REDUCE];
-      if (config_mra.Fg >1) 
+      if (config_mra.Fg >1)
       {
         mra_reduce_required *= 1/config_mra.Fg;
       }
@@ -206,12 +206,12 @@ double mra_task_cost_function (enum mra_phase_e mra_phase, size_t tid_mra, size_
  * @param  mrsg_wid    The ID of the worker that received the task.
  * @return The task cost in FLOPs.
  */
- 
+
 double mrsg_task_cost_function (enum mrsg_phase_e mrsg_phase, size_t tid_mrsg, size_t mrsg_wid)
 {
    double mrsg_map_required;
    double mrsg_reduce_required;
-       
+
     switch (mrsg_phase)
     {
 	case MRSG_MAP:
@@ -230,8 +230,6 @@ double mrsg_task_cost_function (enum mrsg_phase_e mrsg_phase, size_t tid_mrsg, s
 
 int main (int argc, char* argv[])
 {
-
-
     /* MRA_user_init must be called before setting the user functions. */
     MRA_user_init ();
     /* MRSG_user_init must be called before setting the user functions. */
@@ -245,18 +243,33 @@ int main (int argc, char* argv[])
     /* Set the MRSG_map output function. */
     MRSG_set_map_output_f (mrsg_map_output_function);
 
- 
+
     /* Run the MRSG simulation. */
-   // mrsg_input_main = {"g5k.xml", "hello.deploy.xml", "hello_mrsg.conf"};
-   
-    /* Run the BigHybrid simulation. */  
-    //BIGHYBRID_main ("bighyb-plat5hom_15het.xml", "d-bighyb-plat5hom_15het.xml", "bighyb-plat5-15.conf","parser-boinc-080.txt" );
-    BIGHYBRID_main ("Tese-64-64.xml", "d-Tese-64-64.xml", "bighyb-plat64-64.conf","parser-boinc-1500.txt" );
-     //BIGHYBRID_main ("Tese-64-80.xml", "d-Tese-64-80.xml", "bighyb-plat64-64.conf","parser-boinc-1500.txt" );
-    //BIGHYBRID_main ("Tese-96-32.xml", "d-Tese-96-32.xml", "bighyb-plat64-64.conf","parser-boinc-1500.txt" );
-    //BIGHYBRID_main ("yh568-bighybrid-plat.xml", "d-yh568-bighybrid-plat.xml", "yh568-bighybrid.conf","parser-boinc-180.txt");    
-    //BIGHYBRID_main ("plat350-350.xml","d-plat350-350.xml","bighyb-plat350-350.conf","parser-boinc-080.txt");   
+     //BIGHYBRID_main ("plat350-350.xml","d-plat350-350.xml","bighyb-plat350-350.conf","parser-boinc-080.txt");
+
+     /*
+       Check the args given in the command line:
+         < 5 : invalid (something is missing)
+         = 5 : no simgrid arg
+         > 5 : simgrid arg
+     */
+     if(argc < 5)
+     {
+     	printf("usage : %s plat.xml depoly.xml plat.conf machines-trace.txt",argv[0]);
+     	exit(0);
+     }else if (argc == 5){
+      int sg_argc = argc -4;
+      MSG_init (&sg_argc, argv);
+      printf("\n%s %s %s %s",argv[argc-4],argv[argc-3],argv[argc-2],argv[argc-1]);
+      BIGHYBRID_main (argv[argc-4],argv[argc-3],argv[argc-2],argv[argc-1]);
+
+     }else{
+       int sg_argc = argc -4;
+    //	printf("WITH SIMGRID %s\n%s %s %s %s\n",argv[1],argv[sg_argc],argv[sg_argc+1], argv[sg_argc+2],argv[sg_argc+3]);
+       MSG_init (&sg_argc, argv);
+      // BIGHYBRID_main (argv[sg_argc+1],argv[sg_argc+2], argv[sg_argc+3],argv[sg_argc+4]);
+       BIGHYBRID_main (argv[sg_argc],argv[sg_argc+1], argv[sg_argc+2],argv[sg_argc+3]);
+     }
+
     return 0;
 }
-
-

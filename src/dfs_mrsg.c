@@ -15,7 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with BigHybrid, MRSG and MRA++.  If not, see <http://www.gnu.org/licenses/>. */
 
-#include <msg/msg.h>
+#include <simgrid/msg.h>
 #include "common_bighybrid.h"
 #include "worker_mrsg.h"
 #include "dfs_mrsg.h"
@@ -105,7 +105,7 @@ size_t find_random_chunk_owner_mrsg (int mrsg_cid)
 							replica--;
 		   			}
 				}
-				
+
     }
 
     xbt_assert (owner != NONE, "Aborted: chunk %d is missing.", mrsg_cid);
@@ -121,13 +121,16 @@ int data_node_mrsg (int argc, char* argv[])
     msg_error_t  status;
     msg_task_t   msg = NULL;
 
+    size_t wid =get_mrsg_worker_id (MSG_host_self ())+1 ;
+    mrsg_task_pid.data_node[wid] = MSG_process_self_PID ();
+
     sprintf (mailbox, DATANODE_MRSG_MAILBOX, get_mrsg_worker_id (MSG_host_self ()));
 
     while (!job_mrsg.finished)
     {
 	msg = NULL;
 	status = receive (&msg, mailbox);
-	if (status == MSG_OK)
+  if (status == MSG_OK)
 	{
 	    if (mrsg_message_is (msg, SMS_FINISH_MRSG))
 	    {
@@ -170,4 +173,3 @@ static void send_mrsg_data (msg_task_t msg)
 
     MSG_task_destroy (msg);
 }
-

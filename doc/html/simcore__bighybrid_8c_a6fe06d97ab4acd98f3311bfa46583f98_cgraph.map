@@ -1,7 +1,0 @@
-<map id="init_mr_mra_config" name="init_mr_mra_config">
-<area shape="rect" id="node2" href="$simcore__bighybrid_8c.html#a304f53ce22aa109f079f9c3e8c521dbc" title="Initialize the config structure in MRA. " alt="" coords="198,5,309,32"/>
-<area shape="rect" id="node4" href="$simcore__bighybrid_8c.html#a09cdc84e35f029d7393f59d8f19fa06e" title="Initialize the stats structure in MRA. " alt="" coords="201,56,305,83"/>
-<area shape="rect" id="node5" href="$simcore__bighybrid_8c.html#ab6bf4d820598c4e044bd5a5430fa7047" title="Initialize the job structure in MRA. " alt="" coords="207,107,299,133"/>
-<area shape="rect" id="node6" href="$dfs__mra_8c.html#a23d972ed8df40ef6ff709f57e3944042" title="Distribute chunks (and replicas) to DataNodes. " alt="" coords="185,157,321,184"/>
-<area shape="rect" id="node3" href="$common__bighybrid_8c.html#a884c91ed28bb5cf3c180e4b69be18ddf" title="Return the maximum of two values. " alt="" coords="369,5,463,32"/>
-</map>
