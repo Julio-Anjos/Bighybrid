@@ -1,6 +1,0 @@
-<map id="include/worker_mra.h" name="include/worker_mra.h">
-<area shape="rect" id="node2" href="$dfs__mra_8c.html" title="src/dfs_mra.c" alt="" coords="5,80,108,107"/>
-<area shape="rect" id="node3" href="$master__mra_8c.html" title="src/master_mra.c" alt="" coords="132,80,256,107"/>
-<area shape="rect" id="node4" href="$simcore__bighybrid_8c.html" title="src/simcore_bighybrid.c" alt="" coords="279,80,439,107"/>
-<area shape="rect" id="node5" href="$worker__mra_8c.html" title="src/worker_mra.c" alt="" coords="463,80,586,107"/>
-</map>

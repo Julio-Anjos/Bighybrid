@@ -37,6 +37,7 @@ static void update_mra_map_output (msg_host_t worker, size_t mid);
 static void get_mra_chunk (mra_task_info_t ti);
 static void get_mra_map_output (mra_task_info_t ti);
 
+void mra_kill_last_workers();
 
 
 size_t get_mra_worker_id (msg_host_t worker)
@@ -64,7 +65,9 @@ int worker_mra (int argc, char* argv[])
 
     mra_me = MSG_host_self ();
 
-		mra_w_stat_f = (struct mra_work_stat_s*)xbt_new(struct mra_work_stat_s*, (config_mra.mra_number_of_workers * (sizeof (struct mra_work_stat_s))));
+    mra_task_pid.worker[get_mra_worker_id (mra_me)+1] = MSG_process_self_PID();
+
+    mra_w_stat_f = (struct mra_work_stat_s*)xbt_new(struct mra_work_stat_s*, (config_mra.mra_number_of_workers * (sizeof (struct mra_work_stat_s))));
 
     for (i=0; i < config_mra.mra_number_of_workers; i++ )
 		{
@@ -82,36 +85,60 @@ int worker_mra (int argc, char* argv[])
     sprintf (mailbox, TASKTRACKER_MRA_MAILBOX, get_mra_worker_id (mra_me));
     send_mra_sms (SMS_FINISH_MRA, mailbox);
 
+    mra_kill_last_workers();
 
-
+    mra_task_pid.workers_on--;
+    mra_task_pid.worker[get_mra_worker_id (mra_me)+1] = -1;
+    mra_task_pid.status[get_mra_worker_id (mra_me)+1] = OFF;
     return 0;
+}
+
+void mra_kill_last_workers()
+{
+  msg_process_t process_to_kill;
+  for (size_t wid = 1; wid < config_mra.mra_number_of_workers+1; wid++) {
+    if(mra_task_pid.status[wid]==ON && wid!=(get_mra_worker_id (MSG_host_self())+1))
+    {
+         process_to_kill = MSG_process_from_PID(mra_task_pid.worker[wid]);
+        if(process_to_kill!=NULL)
+          MSG_process_kill(process_to_kill);
+
+        process_to_kill = MSG_process_from_PID(mra_task_pid.listen[wid]);
+        if(process_to_kill!=NULL)
+          MSG_process_kill(process_to_kill);
+
+        process_to_kill = MSG_process_from_PID(mra_task_pid.data_node[wid]);
+        if(process_to_kill!=NULL)
+          MSG_process_kill(process_to_kill);
+    }
+      }
 }
 
 /**
  * @brief  The mra_heartbeat loop.
  */
 static void mra_heartbeat (void)
-{   
+{
    	double vc_time_sleep;
     size_t       my_id;
-  
+
     my_id = get_mra_worker_id (MSG_host_self ());
-   
-    //XBT_INFO ("Work_ID %zd \n", my_id);																			
+
+    //XBT_INFO ("Work_ID %zd \n", my_id);
     while (!job_mra.finished)
    if  (config_mra.perc_vc_node > 0)
-    {	
+    {
      	mra_vc_sleep_f (my_id, MSG_get_clock ());
 			vc_time_sleep = vc_traces_time;
-			
+
       /*Sends a SMS, if machine is active in initial time.*/
       if (mra_w_stat_f[my_id].mra_work_status == ACTIVE)
       {
       	send_mra_sms (SMS_HEARTBEAT_MRA, MASTER_MRA_MAILBOX);
       }
-      
-			MSG_process_sleep (vc_time_sleep);	
-						
+
+			MSG_process_sleep (vc_time_sleep);
+
     }
     else
      {
@@ -127,7 +154,7 @@ static void mra_heartbeat (void)
 	send_mra_sms (SMS_HEARTBEAT_MRA, MASTER_MRA_MAILBOX);
 	MSG_process_sleep (config_mra.mra_heartbeat_interval);
     }
-}*/  
+}*/
 }
 
 
@@ -215,6 +242,9 @@ static int listen_mra (int argc, char* argv[])
     msg_task_t   msg_mra = NULL;
 
     mra_me = MSG_host_self ();
+    size_t wid = get_mra_worker_id(mra_me) + 1;
+    mra_task_pid.listen[wid] = MSG_process_self_PID ();
+
     sprintf (mailbox, TASKTRACKER_MRA_MAILBOX, get_mra_worker_id (mra_me));
 
     while (!job_mra.finished)
@@ -246,7 +276,7 @@ static int compute_mra (int argc, char* argv[])
     msg_error_t   status_mra;
     msg_task_t   mra_task;
     mra_task_info_t  ti;
-    xbt_ex_t     e;
+  //  xbt_ex_t     e;
 
     mra_task = (msg_task_t) MSG_process_get_data (MSG_process_self ());
     ti = (mra_task_info_t) MSG_task_get_data (mra_task);
@@ -270,6 +300,11 @@ static int compute_mra (int argc, char* argv[])
 
     if (job_mra.task_status[ti->mra_phase][ti->mra_tid] != T_STATUS_MRA_DONE)
     {
+      status_mra = MSG_task_execute (mra_task);
+
+     if (ti->mra_phase == MRA_MAP &&  status_mra == MSG_OK)
+   update_mra_map_output (MSG_host_self (), ti->mra_tid);
+      /*
 	TRY
 	{
 	     status_mra = MSG_task_execute (mra_task);
@@ -282,6 +317,7 @@ static int compute_mra (int argc, char* argv[])
 	    xbt_assert (e.category == cancel_error, "%s", e.msg);
 	    xbt_ex_free (e);
 	}
+  */
     }
 
     job_mra.mra_heartbeats[ti->mra_wid].slots_av[ti->mra_phase]++;
@@ -333,8 +369,8 @@ static void get_mra_chunk (mra_task_info_t ti)
 	    if (status_mra == MSG_OK)
 		MSG_task_destroy (data);
 	}
-	
-    } 
+
+    }
 }
 
 /**
@@ -386,8 +422,8 @@ static void get_mra_map_output (mra_task_info_t ti)
 		    						status_mra = mra_receive (&data, mailbox);
 		    					if (status_mra == MSG_OK)
 		    						{
-											data_copied[mra_wid] += MSG_task_get_data_size (data);
-											total_copied += MSG_task_get_data_size (data);
+											data_copied[mra_wid] += MSG_task_get_bytes_amount (data);
+											total_copied += MSG_task_get_bytes_amount (data);
 											MSG_task_destroy (data);
 		    						}
 								}

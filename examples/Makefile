@@ -2,8 +2,8 @@ CC = gcc
 CFLAGS = -Wall -g3
 #CFLAGS = -Wall -lpthread -g3 -O3
 
-INSTALL_PATH = $$HOME/simgrid-3.11.1
-INCLUDES = -I../include -I$(INSTALL_PATH)/include 
+INSTALL_PATH = $$HOME/simgrid-3.14.159
+INCLUDES = -I../include -I$(INSTALL_PATH)/include
 DEFS = -L$(INSTALL_PATH)/lib
 LDADD = -lm -lsimgrid
 
@@ -16,6 +16,6 @@ all: $(BIN)
 	$(CC) $(INCLUDES) $(DEFS) -o $@ $^ ../libbighybrid.a $(LDADD)
 
 clean:
-	rm -vf *.bin *.csv *.trace *.plist *.log
+	rm -vf *.bin *.trace *.plist *.log
 
 .PHONY: clean

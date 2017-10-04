@@ -1,7 +1,0 @@
-<map id="init_mr_mrsg_config" name="init_mr_mrsg_config">
-<area shape="rect" id="node2" href="$simcore__bighybrid_8c.html#af077f3c08925c9a08c6bf0f173b6b29c" title="Initialize the config structure in MRSG. " alt="" coords="205,5,322,32"/>
-<area shape="rect" id="node4" href="$simcore__bighybrid_8c.html#ac1eef1094bea0744cef37b4ed75b586f" title="Initialize the stats structure in MRSG. " alt="" coords="208,56,319,83"/>
-<area shape="rect" id="node5" href="$simcore__bighybrid_8c.html#a824a899311029bd4c452c52613a6b9ee" title="Initialize the job structure in MRSG. " alt="" coords="214,107,313,133"/>
-<area shape="rect" id="node6" href="$dfs__mrsg_8c.html#a6071594c683525ac325ef029d0c89b9e" title="Distribute chunks (and replicas) to DataNodes. " alt="" coords="192,157,335,184"/>
-<area shape="rect" id="node3" href="$common__bighybrid_8c.html#a19bf63db11612a2c5c466b3538442b9c" title="mrsg_maxval" alt="" coords="383,5,483,32"/>
-</map>

@@ -1,6 +1,0 @@
-<map id="send_map_to_mra_worker" name="send_map_to_mra_worker">
-<area shape="rect" id="node2" href="$worker__mra_8c.html#a5c30e22e7fb9c6f78fca445efe8277f6" title="Get the ID of a worker. " alt="" coords="440,63,572,90"/>
-<area shape="rect" id="node3" href="$dfs__mra_8c.html#a3f8eddb9dd6200115f7d88325537035e" title="Choose a random DataNode that owns a specific chunk. " alt="" coords="228,31,392,72"/>
-<area shape="rect" id="node4" href="$master__mra_8c.html#a64c57ee32c8b54b270df134681d97726" title="Failure Tolerance Mechanism from volatile machine. " alt="" coords="253,97,367,123"/>
-<area shape="rect" id="node5" href="$master__mra_8c.html#a137c1dfd64d24d0c3a59960e522064bb" title="Send a task to a worker. " alt="" coords="255,147,365,174"/>
-</map>

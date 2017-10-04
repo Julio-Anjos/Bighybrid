@@ -1,4 +1,0 @@
-<map id="send_reduce_to_mrsg_worker" name="send_reduce_to_mrsg_worker">
-<area shape="rect" id="node2" href="$master__mrsg_8c.html#a3b76d6a436cf0e7b059d62851a654539" title="Send a task to a worker. " alt="" coords="204,13,323,39"/>
-<area shape="rect" id="node3" href="$worker__mrsg_8c.html#a4b2a3de75932850eb72307f6c18d40c1" title="Get the ID of a worker. " alt="" coords="371,13,509,39"/>
-</map>

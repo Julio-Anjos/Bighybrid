@@ -17,7 +17,7 @@ along with BigHybrid, MRSG and MRA++.  If not, see <http://www.gnu.org/licenses/
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <msg/msg.h>
+#include <simgrid/msg.h>
 #include <xbt/sysdep.h>
 #include <xbt/log.h>
 #include <xbt/asserts.h>
@@ -65,11 +65,12 @@ static void init_mrsg_stats (void);
 static void free_mrsg_global_mem (void);
 char res_mrsg;
 
-
 // BigHybrid
 
 static msg_error_t run_hybrid_simulation (const char* platform_file, const char* deploy_file, const char* bighybrid_config_file, const char* vc_file);
 static void read_bighybrid_config_file (const char* file_name);
+void print_bighybrid_output();
+
 /*
  * @brief Initialize BigHybrid main.
  * @param  plat  	The path/name of the MRA platform file.
@@ -80,19 +81,6 @@ static void read_bighybrid_config_file (const char* file_name);
 
 int BIGHYBRID_main (const char* plat, const char* depl, const char* conf, const char* vc_file)
 {
-
-   int argc = 8;
-    char* argv[] = {
-    "bighybrid",
-		"--cfg=tracing:yes",
-		"--cfg=tracing/buffer:yes",
-		"--cfg=tracing/filename:tracefile.trace",
-		"--cfg=tracing/categorized:yes",
-		"--cfg=tracing/uncategorized:yes",
-		"--cfg=viva/categorized:cat.plist",
-		"--cfg=viva/uncategorized:uncat.plist"
-    };
-
  		msg_error_t  res_bighybrid = MSG_OK;
 
 
@@ -102,24 +90,21 @@ int BIGHYBRID_main (const char* plat, const char* depl, const char* conf, const 
     check_config_mra ();
     check_config_mrsg ();
 
-//Initialize MRA and MRSG
-
-    MSG_init (&argc, argv);
 
 
     res_bighybrid = run_hybrid_simulation (plat, depl, conf, vc_file);
 
+     print_bighybrid_output();
+
 
     if (res_bighybrid == MSG_OK && job_mrsg.finished == 1 && job_mra.finished == 1)
      {
-       XBT_INFO("RETURNS 0!!!!!!!;");
-  		return 0;
+   		return 0;
      }
     else{
-       XBT_INFO("RETURNS 1!!!!!!!!;");
-	  	return 1;
-      } 
-      
+ 	  	return 1;
+      }
+
 }
 
 /**
@@ -150,11 +135,14 @@ static msg_error_t run_hybrid_simulation (const char* platform_file, const char*
 {
     msg_error_t  res_bighybrid = MSG_OK;
 
+
     read_bighybrid_config_file (bighybrid_config_file);
 
+
 		init_mra_vc (vc_file_name);
-		
+
 		read_bandwidth_mra (platform_file);
+
 
     MSG_create_environment (platform_file);
 
@@ -170,12 +158,14 @@ static msg_error_t run_hybrid_simulation (const char* platform_file, const char*
     MSG_function_register ("worker_mra", worker_mra);
     MSG_function_register ("worker_mrsg", worker_mrsg);
 
+
     MSG_launch_application (deploy_file);
 
     init_mr_mrsg_config (bighybrid_config_file);
     init_mr_mra_config (bighybrid_config_file);
 
     res_bighybrid = MSG_main ();
+
 
 		free_mra_global_mem ();
     free_mrsg_global_mem ();
@@ -488,7 +478,7 @@ static void init_mra_config (void)
 	    wi->mra_wid = mra_wid;
 	    MSG_host_set_data (host, (void*)wi);
 	    /* Add the worker's cpu power to the grid total. */
-	    config_mra.grid_cpu_power += MSG_get_host_speed (host);
+	    config_mra.grid_cpu_power += MSG_host_get_speed (host);
 	    mra_wid++;
 	}
     }
@@ -540,7 +530,7 @@ static void init_mrsg_config (void)
 	    wi->mrsg_wid = mrsg_wid;
 	    MSG_host_set_data (host, (void*)wi);
 	    /* Add the worker's cpu power to the grid total. */
-	    config_mrsg.grid_cpu_power += MSG_get_host_speed (host);
+	    config_mrsg.grid_cpu_power += MSG_host_get_speed (host);
 	    mrsg_wid++;
 	}
     }
@@ -562,11 +552,21 @@ static void init_job_mra (void)
 
     job_mra.finished = 0;
     job_mra.mra_heartbeats = xbt_new (struct mra_heartbeat_s, config_mra.mra_number_of_workers);
+
+    //Workrs PID info
+        mra_task_pid.listen = xbt_new(int,config_mra.mra_number_of_workers);
+        mra_task_pid.data_node = xbt_new(int,config_mra.mra_number_of_workers);
+        mra_task_pid.worker = xbt_new(int,config_mra.mra_number_of_workers);
+        mra_task_pid.workers_on = config_mra.mra_number_of_workers;
+        mra_task_pid.status = xbt_new(int,config_mra.mra_number_of_workers);
+
     for (mra_wid = 0; mra_wid < config_mra.mra_number_of_workers; mra_wid++)
     {
 			job_mra.mra_heartbeats[mra_wid].slots_av[MRA_MAP] = config_mra.mra_slots[MRA_MAP];
 			job_mra.mra_heartbeats[mra_wid].slots_av[MRA_REDUCE] = config_mra.mra_slots[MRA_REDUCE];
 			job_mra.mra_heartbeats[mra_wid].wid_timestamp = sizeof(long double);
+      mra_task_pid.status[mra_wid] = ON;
+
     }
 
     /* Initialize map information. */
@@ -581,7 +581,7 @@ static void init_job_mra (void)
     }
     for (i = 0; i < config_mra.mra_number_of_workers; i++)
     {
-    job_mra.mra_task_dist[MRA_MAP][i] = xbt_new0 (int, (config_mra.mra_number_of_workers * config_mra.amount_of_tasks_mra[MRA_MAP]) * (sizeof (int)));	  
+    job_mra.mra_task_dist[MRA_MAP][i] = xbt_new0 (int, (config_mra.mra_number_of_workers * config_mra.amount_of_tasks_mra[MRA_MAP]) * (sizeof (int)));
     }
     /* Initialize Reduce tasks number. */
     if (config_mra.Fg != 1) {
@@ -625,10 +625,20 @@ static void init_job_mrsg (void)
 
     job_mrsg.finished = 0;
     job_mrsg.mrsg_heartbeats = xbt_new (struct mrsg_heartbeat_s, config_mrsg.mrsg_number_of_workers);
+
+    //Workrs PID info
+        mrsg_task_pid.listen = xbt_new(int,config_mrsg.mrsg_number_of_workers);
+        mrsg_task_pid.data_node = xbt_new(int,config_mrsg.mrsg_number_of_workers);
+        mrsg_task_pid.worker = xbt_new(int,config_mrsg.mrsg_number_of_workers);
+        mrsg_task_pid.workers_on = config_mrsg.mrsg_number_of_workers;
+        mrsg_task_pid.status = xbt_new(int,config_mrsg.mrsg_number_of_workers);
+
     for (mrsg_wid = 0; mrsg_wid < config_mrsg.mrsg_number_of_workers; mrsg_wid++)
     {
 	job_mrsg.mrsg_heartbeats[mrsg_wid].slots_av[MRSG_MAP] = config_mrsg.mrsg_slots[MRSG_MAP];
 	job_mrsg.mrsg_heartbeats[mrsg_wid].slots_av[MRSG_REDUCE] = config_mrsg.mrsg_slots[MRSG_REDUCE];
+  mrsg_task_pid.status[mrsg_wid] = ON;
+
     }
 
     /* Initialize map information. */
@@ -650,6 +660,7 @@ static void init_job_mrsg (void)
     job_mrsg.task_list[MRSG_REDUCE] = xbt_new0 (msg_task_t*, config_mrsg.amount_of_tasks_mrsg[MRSG_REDUCE]);
     for (i = 0; i < config_mrsg.amount_of_tasks_mrsg[MRSG_REDUCE]; i++)
 	job_mrsg.task_list[MRSG_REDUCE][i] = xbt_new0 (msg_task_t, MAX_SPECULATIVE_COPIES);
+
 }
 
 
@@ -684,6 +695,41 @@ static void init_mrsg_stats (void)
     stats_mrsg.reduce_mrsg_spec 	= 0;
 }
 
+void print_bighybrid_output()
+{
+  FILE * mra_results = fopen("stats_mra.csv","a");
+  FILE * mrsg_results = fopen("stats_mrsg.csv","a");;
+  FILE * time_mra = fopen("time_mra.csv","a");
+  FILE * time_mrsg = fopen("time_mrsg.csv","a");
+  fseek(mra_results, 0, SEEK_END);
+  fseek(mrsg_results, 0, SEEK_END);
+
+  fprintf(time_mra,"%d;%d;%d;%f;%f;%f\n",(int)config_mra.perc_vc_node,config_mra.Fg,config_mra.mra_chunk_count,config_mra.mra_chunk_size,
+  stats_mra.map_time,stats_mra.reduce_time );
+  fprintf(time_mrsg,"%d;%f;%f;%f\n",config_mrsg.mrsg_chunk_count,config_mrsg.mrsg_chunk_size,stats_mrsg.map_time,stats_mrsg.reduce_time);
+
+  fprintf(mra_results, "%f;%d;%d;%f",config_mra.perc_vc_node,config_mra.Fg,config_mra.mra_chunk_count,config_mra.mra_chunk_size );
+  fprintf(mrsg_results, "%d;%f",config_mrsg.mrsg_chunk_count,config_mrsg.mrsg_chunk_size );
+  fprintf(mra_results,"%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%f;%f\n",
+          stats_mra.map_local_mra,stats_mra.mra_map_remote,stats_mra.map_spec_mra_l,
+          stats_mra.map_spec_mra_r,stats_mra.mra_map_recovery,
+          stats_mra.mra_map_remote + stats_mra.map_spec_mra_r,
+          stats_mra.map_spec_mra_l + stats_mra.map_spec_mra_r,
+          stats_mra.reduce_mra_normal,stats_mra.reduce_mra_spec,
+          stats_mra.mra_reduce_recovery,stats_mra.map_time,
+          stats_mra.reduce_time);
+
+  fprintf(mrsg_results,"%d;%d;%d;%d;%d;%d;%d;%d;%f;%f\n",
+          stats_mrsg.map_local_mrsg,stats_mrsg.map_remote_mrsg,stats_mrsg.map_spec_mrsg_l
+          ,stats_mrsg.map_spec_mrsg_r,stats_mrsg.map_remote_mrsg + stats_mrsg.map_spec_mrsg_r
+          ,stats_mrsg.map_spec_mrsg_l + stats_mrsg.map_spec_mrsg_r,stats_mrsg.reduce_mrsg_normal,
+          stats_mrsg.reduce_mrsg_spec,stats_mrsg.map_time,stats_mrsg.reduce_time);
+
+  fclose(mrsg_results);
+  fclose(mra_results);
+  fclose(time_mra);
+  fclose(time_mrsg);
+}
 
 /**
  * @brief  Free allocated memory for global variables in MRA.
@@ -713,6 +759,11 @@ for (i = 0; i < config_mra.mra_chunk_count; i++)
       xbt_free_ref (&job_mra.mra_task_dist[MRA_REDUCE][i]);
       xbt_free_ref (&job_mra.mra_task_dist[MRA_MAP][i]);
     }
+
+    xbt_free_ref(&mra_task_pid.worker);
+    xbt_free_ref(&mra_task_pid.data_node);
+    xbt_free_ref(&mra_task_pid.listen);
+    xbt_free_ref(&mra_task_pid.status);
 }
 
 
@@ -739,6 +790,11 @@ static void free_mrsg_global_mem (void)
     for (imrsg = 0; imrsg < config_mrsg.amount_of_tasks_mrsg[MRSG_REDUCE]; imrsg++)
 	xbt_free_ref (&job_mrsg.task_list[MRSG_REDUCE][imrsg]);
     xbt_free_ref (&job_mrsg.task_list[MRSG_REDUCE]);
+
+    xbt_free_ref(&mrsg_task_pid.worker);
+    xbt_free_ref(&mrsg_task_pid.data_node);
+    xbt_free_ref(&mrsg_task_pid.listen);
+    xbt_free_ref(&mrsg_task_pid.status);
 }
 /*static void finish_all_pids (void)
 {

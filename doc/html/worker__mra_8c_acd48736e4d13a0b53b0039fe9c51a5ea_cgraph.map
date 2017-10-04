@@ -1,8 +1,0 @@
-<map id="get_mra_map_output" name="get_mra_map_output">
-<area shape="rect" id="node2" href="$worker__mra_8c.html#a5c30e22e7fb9c6f78fca445efe8277f6" title="Get the ID of a worker. " alt="" coords="209,5,341,32"/>
-<area shape="rect" id="node3" href="$common__bighybrid_8c.html#a8205e98d4874b7e31f138d5016ad1eba" title="Return the input size of a reduce task. " alt="" coords="197,56,353,83"/>
-<area shape="rect" id="node4" href="$common__bighybrid_8c.html#a385b12669d8faf7b5cdb54c1ae597e1c" title="Send a message/task. " alt="" coords="250,107,301,133"/>
-<area shape="rect" id="node7" href="$common__bighybrid_8c.html#a6fc60933b9eabe64a880f68eba3131cc" title="Receive a message/task from a mailbox. " alt="" coords="243,157,307,184"/>
-<area shape="rect" id="node5" href="$common__bighybrid_8c.html#a2595166c31f66208384d3f194dc12dd7" title="Compare the message from a task with a string. " alt="" coords="405,81,526,108"/>
-<area shape="rect" id="node6" href="$common__bighybrid_8c.html#a17b262d1619d68c51081400247c46016" title="mrsg_message_is" alt="" coords="401,132,529,159"/>
-</map>

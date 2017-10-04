@@ -1,5 +1,0 @@
-var searchData=
-[
-  ['xbt_5flog_5fexternal_5fdefault_5fcategory',['XBT_LOG_EXTERNAL_DEFAULT_CATEGORY',['../common__bighybrid_8c.html#a32bd1bae277b9aa336336310547bb693',1,'XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(msg_test):&#160;common_bighybrid.c'],['../dfs__mra_8c.html#a32bd1bae277b9aa336336310547bb693',1,'XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(msg_test):&#160;dfs_mra.c'],['../dfs__mrsg_8c.html#a32bd1bae277b9aa336336310547bb693',1,'XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(msg_test):&#160;dfs_mrsg.c'],['../master__mra_8c.html#a32bd1bae277b9aa336336310547bb693',1,'XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(msg_test):&#160;master_mra.c'],['../master__mrsg_8c.html#a32bd1bae277b9aa336336310547bb693',1,'XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(msg_test):&#160;master_mrsg.c'],['../worker__mra_8c.html#a32bd1bae277b9aa336336310547bb693',1,'XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(msg_test):&#160;worker_mra.c'],['../worker__mrsg_8c.html#a32bd1bae277b9aa336336310547bb693',1,'XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(msg_test):&#160;worker_mrsg.c']]],
-  ['xbt_5flog_5fnew_5fdefault_5fcategory',['XBT_LOG_NEW_DEFAULT_CATEGORY',['../simcore__bighybrid_8c.html#a4d110f2a9a5382b56dea5530ecab53c4',1,'simcore_bighybrid.c']]]
-];
