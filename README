@@ -1,13 +1,13 @@
 To run the example, follow these steps:
 
-1) Make sure you have installed SimGrid (3.11  recommended).
+1) Make sure you have installed SimGrid (3.29 recommended).
    (http://simgrid.gforge.inria.fr/)
 
-2) Inside MRA's root and examples directories, edit the Makefiles and change
+2) Inside BigHybrid's root and examples directories, edit the Makefiles and change
    the INSTALL_PATH variable to match your SimGrid installation path
    (e.g. /usr).
 
-3) Compile MRA with 'make' in the command line, and then do the same for the example.
+3) Compile BigHybrid with 'make' in the command line, and then do the same for the example.
 
 4)  Into examples folder has platform samples. Install behind the python to run
 
@@ -21,9 +21,11 @@ To run the example, follow these steps:
 	Or: ./create-mra-plat.py platform_file.xml 10 2 7e9 1e-4:1e-2 1.25e6:1.25e8
 	Or: ./create-mra-plat.py platform_file.xml 10 2 4e9:7e9 1e-4:1e-2 1.25e6:1.25e8
 
- After ./create-mra-depoly.py platform_file.xml
+ 	After: ./create-mra-depoly.py platform_file.xml
+	 
+	=> More info on: platforms/how_create_plat.txt
    
- Change user functions on hello.c
+ 	Change user functions on hello.c if neecessary
 
 5) Execute the example (./run.sh).
 

@@ -1,14 +1,14 @@
-CC = gcc
+CC = g++ -std=c++14
 CFLAGS = -Wall -g3
 #CFLAGS = -Wall -lpthread -g3 -O3
 
-INSTALL_PATH = $$HOME/simgrid-3.14.159
+INSTALL_PATH = /opt/simgrid
 INCLUDES = -Iinclude -I$(INSTALL_PATH)/include
-DEFS = -L$(INSTALL_PATH)/lib
+DEFS = -L$(INSTALL_PATH)/lib64
 LDADD = -lm -lsimgrid
 
 BIN = libbighybrid.a
-OBJ = common_bighybrid.o simcore_bighybrid.o dfs_mra.o master_mra.o worker_mra.o user_mra.o dfs_mrsg.o master_mrsg.o worker_mrsg.o user_mrsg.o
+OBJ = common_bighybrid.o simcore_bighybrid.o dfs_mra.o master_mra.o worker_mra.o user_mra.o dfs_mrsg.o master_mrsg.o worker_mrsg.o user_mrsg.o task_bighybrid.o
 
 all: $(BIN)
 
@@ -16,8 +16,8 @@ $(BIN): $(OBJ)
 	ar rcs $(BIN) $(OBJ)
 #	$(CC) $(INCLUDES) $(DEFS) $(CFLAGS) $(LDADD) -o $@ $^
 
-%.o: src/%.c include/*.h
-	$(CC) $(INCLUDES) $(DEFS) $(CFLAGS) -c -o $@ $<
+%.o: src/%.cpp include/*.hpp
+	$(CC) $(INCLUDES) $(DEFS) $(CFLAGS) $(LDADD) -c -o $@ $<
 
 verbose: clean
 	$(eval CFLAGS += -DVERBOSE)
